@@ -32,3 +32,40 @@ def test_parse_args_supports_output_json():
     )
 
     assert args.output_json == "outputs/result.json"
+
+
+def test_parse_args_supports_visualize_3d_override():
+    cli = _load_cli_module()
+    enabled = cli.parse_args(
+        [
+            "--config",
+            "configs/yolo_rng.yaml",
+            "--rgb",
+            "data/rgb.png",
+            "--depth",
+            "data/depth.png",
+            "--intrinsics",
+            "data/camera_intrinsics.npz",
+            "--target",
+            "apple",
+            "--visualize-3d",
+        ]
+    )
+    disabled = cli.parse_args(
+        [
+            "--config",
+            "configs/yolo_rng.yaml",
+            "--rgb",
+            "data/rgb.png",
+            "--depth",
+            "data/depth.png",
+            "--intrinsics",
+            "data/camera_intrinsics.npz",
+            "--target",
+            "apple",
+            "--no-visualize-3d",
+        ]
+    )
+
+    assert enabled.visualize_3d is True
+    assert disabled.visualize_3d is False

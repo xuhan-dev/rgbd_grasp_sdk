@@ -87,4 +87,5 @@ def _load_outputs(data: Any) -> OutputConfig:
         return_point_cloud=bool(data.get("return_point_cloud", False)),
         return_segmentation_preview=bool(data.get("return_segmentation_preview", True)),
         return_candidates=bool(data.get("return_candidates", True)),
+        visualize_3d=bool(data.get("visualize_3d", False)),
     )

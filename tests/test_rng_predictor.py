@@ -44,3 +44,26 @@ def test_rng_predictor_projects_translation_to_center_px_when_missing():
     )
 
     assert result.candidates[0].center_px == (43, 87)
+
+
+def test_rng_predictor_passes_visualize_3d_to_backend():
+    class FakePredictor:
+        def __init__(self):
+            self.vis_values = []
+
+        def predict(self, rgb, depth, vis=False):
+            self.vis_values.append(vis)
+            return [FakeRngGrasp()], None
+
+    backend = FakePredictor()
+    predictor = RngGraspPredictor({}, predictor=backend)
+    predictor.predict(
+        GraspRequest(
+            rgb=np.zeros((2, 2, 3), dtype=np.uint8),
+            depth=np.zeros((2, 2), dtype=np.uint16),
+            intrinsics=CameraIntrinsics(fx=100.0, fy=100.0, cx=10.0, cy=20.0),
+            metadata={"visualize_3d": True},
+        )
+    )
+
+    assert backend.vis_values == [True]

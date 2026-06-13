@@ -28,12 +28,14 @@ class GraspPipeline:
         ranker: GraspRanker | None = None,
         mask_config: MaskConfig | None = None,
         min_grasp_score: float = 0.0,
+        visualize_3d: bool = False,
     ) -> None:
         self.segmenter = segmenter
         self.grasp_predictor = grasp_predictor
         self.ranker = ranker or DefaultGraspRanker()
         self.mask_config = mask_config or MaskConfig()
         self.min_grasp_score = min_grasp_score
+        self.visualize_3d = visualize_3d
 
     def run(
         self,
@@ -79,6 +81,7 @@ class GraspPipeline:
                         depth=depth,
                         intrinsics=intrinsics,
                         target_mask=target_mask,
+                        metadata={"visualize_3d": self.visualize_3d},
                     )
                 )
 

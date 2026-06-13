@@ -17,7 +17,12 @@ class RngGraspPredictor:
         self.predictor = predictor or self._load_predictor()
 
     def predict(self, request: GraspRequest) -> GraspPredictionResult:
-        pred_gg, point_cloud = self.predictor.predict(request.rgb, request.depth, vis=False)
+        visualize_3d = bool(request.metadata.get("visualize_3d", False))
+        pred_gg, point_cloud = self.predictor.predict(
+            request.rgb,
+            request.depth,
+            vis=visualize_3d,
+        )
         candidates = []
         for grasp in pred_gg:
             candidates.append(

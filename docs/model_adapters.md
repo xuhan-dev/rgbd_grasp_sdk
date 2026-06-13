@@ -56,6 +56,20 @@ python3 examples/run_image_pair.py \
   --output-json /tmp/rgbd_grasp_smoke/result.json
 ```
 
+默认不打开 3D 可视化窗口，避免自动化 smoke 被 GUI 阻塞。需要查看最终抓取结果时，可以在配置中设置：
+
+```yaml
+outputs:
+  visualize_3d: true
+```
+
+也可以在命令行临时覆盖：
+
+```bash
+python3 examples/run_image_pair.py ... --visualize-3d
+python3 examples/run_image_pair.py ... --no-visualize-3d
+```
+
 ## FastSAM
 
 FastSAM 依赖需要按实际环境配置源码路径或安装包。基础 SDK 不在 import 阶段加载 FastSAM。

@@ -27,3 +27,4 @@ outputs:
   return_point_cloud: false
   return_segmentation_preview: true
   return_candidates: true
+  visualize_3d: false

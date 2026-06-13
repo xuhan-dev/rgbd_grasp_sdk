@@ -20,6 +20,7 @@ ranking:
   backend: default
 outputs:
   return_point_cloud: false
+  visualize_3d: true
 """.strip(),
         encoding="utf-8",
     )
@@ -29,6 +30,7 @@ outputs:
     assert config.segmentation.backend == "yolo"
     assert config.grasping.backend == "rng"
     assert config.outputs.return_point_cloud is False
+    assert config.outputs.visualize_3d is True
 
 
 def test_load_config_rejects_missing_required_section(tmp_path: Path):

@@ -21,6 +21,12 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--intrinsics", required=True, help="包含 K 的相机内参 npz")
     parser.add_argument("--target", required=True, help="目标类别或文本描述")
     parser.add_argument("--output-json", help="可选 JSON 结果输出路径")
+    parser.add_argument(
+        "--visualize-3d",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="是否显示抓取3D可视化，默认使用配置文件 outputs.visualize_3d",
+    )
     return parser.parse_args(argv)
 
 
@@ -29,7 +35,16 @@ def main() -> None:
     config = load_config(args.config)
     segmenter = create_segmenter(config.segmentation.backend, config.segmentation.options)
     grasp_predictor = create_grasp_predictor(config.grasping.backend, config.grasping.options)
-    pipeline = GraspPipeline(segmenter=segmenter, grasp_predictor=grasp_predictor)
+    visualize_3d = (
+        config.outputs.visualize_3d
+        if args.visualize_3d is None
+        else bool(args.visualize_3d)
+    )
+    pipeline = GraspPipeline(
+        segmenter=segmenter,
+        grasp_predictor=grasp_predictor,
+        visualize_3d=visualize_3d,
+    )
 
     result = pipeline.run(
         rgb=read_rgb(args.rgb),

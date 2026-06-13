@@ -35,6 +35,7 @@ class OutputConfig:
     return_point_cloud: bool = False
     return_segmentation_preview: bool = True
     return_candidates: bool = True
+    visualize_3d: bool = False
 
 
 @dataclass(frozen=True)
