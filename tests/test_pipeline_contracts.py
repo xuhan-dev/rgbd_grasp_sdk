@@ -52,3 +52,53 @@ def test_unknown_backends_raise_clear_errors():
         assert "未知抓取 backend" in str(exc)
     else:
         raise AssertionError("create_grasp_predictor should fail for unknown backend")
+
+
+from rgbd_grasp_sdk.pipeline.grasp_pipeline import GraspPipeline
+from rgbd_grasp_sdk.types import (
+    GraspPredictionResult,
+    GraspRequest,
+    MaskResult,
+    SegmentationRequest,
+    SegmentationResult,
+)
+
+
+class MockSegmenter:
+    def segment(self, request: SegmentationRequest) -> SegmentationResult:
+        mask = np.zeros(request.rgb.shape[:2], dtype=bool)
+        mask[2, 3] = True
+        return SegmentationResult(masks=[MaskResult(mask=mask, score=1.0, label=request.target)])
+
+
+class MockGraspPredictor:
+    def predict(self, request: GraspRequest) -> GraspPredictionResult:
+        inside = GraspCandidate(
+            pose=Pose6D(0.0, 0.0, 0.5, 0.0, 0.0, 0.0),
+            score=0.9,
+            center_px=(3, 2),
+        )
+        outside = GraspCandidate(
+            pose=Pose6D(0.0, 0.0, 0.5, 0.0, 0.0, 0.0),
+            score=1.0,
+            center_px=(0, 0),
+        )
+        return GraspPredictionResult(candidates=[outside, inside])
+
+
+def test_pipeline_uses_injected_interfaces_and_filters_by_mask():
+    pipeline = GraspPipeline(
+        segmenter=MockSegmenter(),
+        grasp_predictor=MockGraspPredictor(),
+    )
+    rgb = np.zeros((6, 6, 3), dtype=np.uint8)
+    depth = np.ones((6, 6), dtype=np.uint16)
+    intrinsics = CameraIntrinsics(fx=600.0, fy=600.0, cx=3.0, cy=3.0)
+
+    result = pipeline.run(rgb=rgb, depth=depth, intrinsics=intrinsics, target="apple")
+
+    assert result.status is PipelineStatus.SUCCESS
+    assert result.best_grasp is not None
+    assert result.best_grasp.center_px == (3, 2)
+    assert len(result.candidate_grasps) == 1
+    assert "total" in result.timings
