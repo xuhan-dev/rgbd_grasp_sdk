@@ -1,0 +1,28 @@
+segmentation:
+  backend: fastsam
+  model_path: <legacy-project-root>/examples/weights/FastSAM.pt
+  device: cuda
+  image_size: 1280
+  confidence: 0.2
+  iou: 0.6
+
+grasping:
+  backend: rng
+  checkpoint_path: <project-root>/third_party/RegionNormalizedGrasp/checkpoints/realsense
+  device: cuda
+  input_size: [360, 640]
+
+mask:
+  merge_instances: true
+  dilate_kernel: 10
+  dilate_iterations: 2
+  min_area: 0
+
+ranking:
+  backend: default
+  top_k: 10
+
+outputs:
+  return_point_cloud: false
+  return_segmentation_preview: true
+  return_candidates: true
