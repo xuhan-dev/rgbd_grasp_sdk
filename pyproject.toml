@@ -18,9 +18,33 @@ dependencies = [
 dev = [
   "pytest>=7.4",
 ]
+yolo = [
+  "ultralytics>=8.3",
+]
+fastsam = [
+  "torch>=1.11",
+  "torchvision>=0.12",
+  "ftfy",
+  "regex",
+  "tqdm",
+]
+rng = [
+  "torch>=1.11",
+  "torchvision>=0.12",
+  "open3d",
+  "transforms3d",
+  "scikit-image",
+  "trimesh",
+]
+all-models = [
+  "rgbd-grasp-sdk[yolo,fastsam,rng]",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+  "integration: requires model weights or GPU-capable model dependencies",
+]
