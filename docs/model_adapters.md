@@ -36,12 +36,13 @@ pip install -e ".[rng]"
 
 - PyTorch 轮子必须匹配本机 NVIDIA 驱动支持的 CUDA 版本。
 - RNG 配置中的相机内参路径需要放在 `grasping.model_config.intrinsics_path`，该目录下应包含 `camera_intrinsics.npz`。
-- 旧 RNG 代码还会依赖 `pytorch3d` 和 `grasp_nms`。如果当前 Python/CUDA 组合没有可安装轮子，可以用临时 fallback 先验证真实权重前向链路；生产环境应安装或编译对应实现。
+- 旧 RNG 代码还会依赖 `pytorch3d` 和 `grasp_nms`。SDK 会优先使用真实 `pytorch3d`；缺失时自动注册 `rgbd_grasp_sdk.compat.pytorch3d_ops` 中的轻量 fallback。
+- `grasp_nms` 从 `third_party/grasp_nms/grasp_nms.py` 加载。当前 fallback 不执行真正 NMS，只用于 smoke test 和功能连通性验证；生产环境建议替换为编译版实现。
 
 本地 smoke 命令示例：
 
 ```bash
-PYTHONPATH=/tmp/rgbd_grasp_smoke/site:../sam_rng:../sam_rng/RegionNormalizedGrasp \
+PYTHONPATH=../sam_rng:../sam_rng/RegionNormalizedGrasp \
 python3 examples/run_image_pair.py \
   --config /tmp/rgbd_grasp_smoke/smoke_yolo_rng.yaml \
   --rgb third_party/RegionNormalizedGrasp/images/demo_rgb.png \

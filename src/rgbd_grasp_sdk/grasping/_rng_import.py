@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from rgbd_grasp_sdk.compat.pytorch3d_ops import install_rng_compat_fallbacks
 from rgbd_grasp_sdk.errors import BackendUnavailableError
 
 
@@ -21,6 +22,7 @@ def load_rng_predictor(options: dict[str, Any]) -> Any:
 
 def _load_grasp_predictor_class() -> type[Any]:
     rng_path = _find_rng_module_path()
+    install_rng_compat_fallbacks()
     module_name = "_rgbd_grasp_sdk_legacy_rng"
     spec = importlib.util.spec_from_file_location(module_name, rng_path)
     if spec is None or spec.loader is None:
