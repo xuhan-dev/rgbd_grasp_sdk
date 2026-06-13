@@ -1,22 +1,27 @@
 from __future__ import annotations
 
 import argparse
+import json
+from pathlib import Path
+from typing import Sequence
 
 from rgbd_grasp_sdk.config.loader import load_config
 from rgbd_grasp_sdk.grasping.factory import create_grasp_predictor
 from rgbd_grasp_sdk.io import read_depth, read_intrinsics_npz, read_rgb
 from rgbd_grasp_sdk.pipeline.grasp_pipeline import GraspPipeline
+from rgbd_grasp_sdk.serialization import pipeline_result_to_dict
 from rgbd_grasp_sdk.segmentation.factory import create_segmenter
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="运行单帧 RGB-D 抓取预测")
     parser.add_argument("--config", required=True, help="YAML 配置路径")
     parser.add_argument("--rgb", required=True, help="RGB 图像路径")
     parser.add_argument("--depth", required=True, help="depth 图像路径")
     parser.add_argument("--intrinsics", required=True, help="包含 K 的相机内参 npz")
     parser.add_argument("--target", required=True, help="目标类别或文本描述")
-    return parser.parse_args()
+    parser.add_argument("--output-json", help="可选 JSON 结果输出路径")
+    return parser.parse_args(argv)
 
 
 def main() -> None:
@@ -41,6 +46,14 @@ def main() -> None:
     if result.error is not None:
         print(f"error: {result.error.code} - {result.error.message}")
     print(f"timings: {result.timings}")
+
+    if args.output_json:
+        output_path = Path(args.output_json)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            json.dumps(pipeline_result_to_dict(result), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
 
 
 if __name__ == "__main__":
