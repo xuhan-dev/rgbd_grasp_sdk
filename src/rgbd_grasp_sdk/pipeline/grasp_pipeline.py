@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import numpy as np
 
+from rgbd_grasp_sdk.config.schema import MaskConfig
 from rgbd_grasp_sdk.filtering.mask_filter import filter_grasps_by_mask
 from rgbd_grasp_sdk.grasping.base import GraspPredictor
-from rgbd_grasp_sdk.masks.postprocess import merge_masks
+from rgbd_grasp_sdk.masks.postprocess import postprocess_masks
 from rgbd_grasp_sdk.ranking.base import GraspRanker
 from rgbd_grasp_sdk.ranking.default_ranker import DefaultGraspRanker
 from rgbd_grasp_sdk.segmentation.base import Segmenter
@@ -25,11 +26,13 @@ class GraspPipeline:
         segmenter: Segmenter,
         grasp_predictor: GraspPredictor,
         ranker: GraspRanker | None = None,
+        mask_config: MaskConfig | None = None,
         min_grasp_score: float = 0.0,
     ) -> None:
         self.segmenter = segmenter
         self.grasp_predictor = grasp_predictor
         self.ranker = ranker or DefaultGraspRanker()
+        self.mask_config = mask_config or MaskConfig()
         self.min_grasp_score = min_grasp_score
 
     def run(
@@ -58,7 +61,7 @@ class GraspPipeline:
                 segmentation = self.segmenter.segment(
                     SegmentationRequest(rgb=rgb, target=target)
                 )
-            target_mask = merge_masks(segmentation.masks)
+            target_mask = postprocess_masks(segmentation.masks, self.mask_config)
             if target_mask.size == 0 or not bool(target_mask.any()):
                 return PipelineResult(
                     status=PipelineStatus.FAILED,

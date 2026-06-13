@@ -102,3 +102,42 @@ def test_pipeline_uses_injected_interfaces_and_filters_by_mask():
     assert result.best_grasp.center_px == (3, 2)
     assert len(result.candidate_grasps) == 1
     assert "total" in result.timings
+
+
+from rgbd_grasp_sdk.config.schema import MaskConfig
+
+
+def test_pipeline_applies_mask_postprocess_config():
+    class OnePixelSegmenter:
+        def segment(self, request: SegmentationRequest) -> SegmentationResult:
+            mask = np.zeros(request.rgb.shape[:2], dtype=bool)
+            mask[2, 2] = True
+            return SegmentationResult(masks=[MaskResult(mask=mask)])
+
+    class NearbyGraspPredictor:
+        def predict(self, request: GraspRequest) -> GraspPredictionResult:
+            return GraspPredictionResult(
+                candidates=[
+                    GraspCandidate(
+                        pose=Pose6D(0.0, 0.0, 0.5, 0.0, 0.0, 0.0),
+                        score=0.8,
+                        center_px=(3, 2),
+                    )
+                ]
+            )
+
+    pipeline = GraspPipeline(
+        segmenter=OnePixelSegmenter(),
+        grasp_predictor=NearbyGraspPredictor(),
+        mask_config=MaskConfig(dilate_kernel=3, dilate_iterations=1),
+    )
+
+    result = pipeline.run(
+        rgb=np.zeros((6, 6, 3), dtype=np.uint8),
+        depth=np.ones((6, 6), dtype=np.uint16),
+        intrinsics=CameraIntrinsics(fx=600.0, fy=600.0, cx=3.0, cy=3.0),
+        target="apple",
+    )
+
+    assert result.status is PipelineStatus.SUCCESS
+    assert result.best_grasp is not None
