@@ -1347,7 +1347,7 @@ Run:
 
 ```bash
 pytest -q
-rg -n -F "/home" README.md docs configs src tests examples
+rg -n -F "/home" README.md docs/architecture.md docs/model_adapters.md configs src tests examples
 ```
 
 Expected: pytest PASS; path scan has no output.
@@ -1405,9 +1405,9 @@ Expected: no output.
 Run:
 
 ```bash
-rg -n -F "/home" README.md docs configs src tests examples
-rg -n -F "/Users" README.md docs configs src tests examples
-rg -n -F "C:\\" README.md docs configs src tests examples
+rg -n -F "/home" README.md docs/architecture.md docs/model_adapters.md configs src tests examples
+rg -n -F "/Users" README.md docs/architecture.md docs/model_adapters.md configs src tests examples
+rg -n -F "C:\\" README.md docs/architecture.md docs/model_adapters.md configs src tests examples
 ```
 
 Expected: no output.

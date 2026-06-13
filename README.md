@@ -36,4 +36,25 @@ python examples/run_image_pair.py \
   --target apple
 ```
 
-第一阶段的真实 YOLO/FastSAM/RNG adapter 尚未接入。CLI 主要用于验证配置、输入读取和 pipeline 组合方式。
+CLI 可用于验证配置、输入读取、pipeline 组合方式和 JSON 输出；真实模型运行仍依赖相应 extras、权重和运行环境。
+
+## 第二阶段模型接入
+
+基础包仍保持轻量导入。真实模型依赖通过 extras 安装：
+
+```bash
+pip install -e ".[yolo]"
+pip install -e ".[rng]"
+```
+
+单帧 smoke test 示例：
+
+```bash
+python examples/run_image_pair.py \
+  --config configs/smoke_yolo_rng.yaml \
+  --rgb data/rgb.png \
+  --depth data/depth.png \
+  --intrinsics data/camera_intrinsics.npz \
+  --target apple \
+  --output-json outputs/result.json
+```
