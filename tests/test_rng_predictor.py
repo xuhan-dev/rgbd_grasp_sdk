@@ -46,7 +46,7 @@ def test_rng_predictor_projects_translation_to_center_px_when_missing():
     assert result.candidates[0].center_px == (43, 87)
 
 
-def test_rng_predictor_passes_visualize_3d_to_backend():
+def test_rng_predictor_does_not_visualize_inside_backend():
     class FakePredictor:
         def __init__(self):
             self.vis_values = []
@@ -66,4 +66,4 @@ def test_rng_predictor_passes_visualize_3d_to_backend():
         )
     )
 
-    assert backend.vis_values == [True]
+    assert backend.vis_values == [False]

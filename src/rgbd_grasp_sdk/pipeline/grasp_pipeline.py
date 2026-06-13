@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Any
+
 import numpy as np
 
 from rgbd_grasp_sdk.config.schema import MaskConfig
@@ -29,6 +32,7 @@ class GraspPipeline:
         mask_config: MaskConfig | None = None,
         min_grasp_score: float = 0.0,
         visualize_3d: bool = False,
+        visualizer: Callable[[Any, list, Any], None] | None = None,
     ) -> None:
         self.segmenter = segmenter
         self.grasp_predictor = grasp_predictor
@@ -36,6 +40,7 @@ class GraspPipeline:
         self.mask_config = mask_config or MaskConfig()
         self.min_grasp_score = min_grasp_score
         self.visualize_3d = visualize_3d
+        self.visualizer = visualizer
 
     def run(
         self,
@@ -104,6 +109,8 @@ class GraspPipeline:
 
             with timer.measure("ranking"):
                 ranked = self.ranker.rank(filtered)
+            if self.visualize_3d:
+                self._visualize_prediction(prediction.point_cloud, prediction.candidates, ranked[0])
 
         return PipelineResult(
             status=PipelineStatus.SUCCESS,
@@ -115,3 +122,16 @@ class GraspPipeline:
             timings=timer.timings,
             metadata={"target": target},
         )
+
+    def _visualize_prediction(
+        self,
+        point_cloud: Any,
+        all_candidates: list,
+        selected_grasp: Any,
+    ) -> None:
+        visualizer = self.visualizer
+        if visualizer is None:
+            from rgbd_grasp_sdk.visualization import visualize_grasp_candidates
+
+            visualizer = visualize_grasp_candidates
+        visualizer(point_cloud, all_candidates, selected_grasp)
