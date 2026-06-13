@@ -1,5 +1,11 @@
-# grasp_nms fallback
+# grasp_nms
 
-该目录用于承载 RegionNormalizedGrasp 运行时需要的 `grasp_nms` 模块。
+RegionNormalizedGrasp 运行时需要真实的 `grasp_nms` C 扩展。
 
-当前 Python fallback 直接返回输入候选，不执行真正的 6DoF NMS，目标是让真实权重 smoke test 可以在缺少编译扩展时跑通。生产环境建议替换为编译版 `grasp_nms` 实现。
+当前项目默认不使用 no-op NMS fallback。请在运行真实 RNG 前安装编译版：
+
+```bash
+python3 -m pip install grasp_nms
+```
+
+安装成功后，Python 应能导入类似 `grasp_nms.cpython-310-x86_64-linux-gnu.so` 的扩展模块。

@@ -29,8 +29,8 @@ fastsam = [
   "tqdm",
 ]
 rng = [
-  "torch>=1.11",
-  "torchvision>=0.12",
+  "torch==2.4.1",
+  "torchvision==0.19.1",
   "open3d",
   "transforms3d",
   "scikit-image",
@@ -40,6 +40,8 @@ rng = [
   "autolab_core",
   "cvxopt",
   "matplotlib>=3.10",
+  "iopath",
+  "grasp_nms",
 ]
 all-models = [
   "rgbd-grasp-sdk[yolo,fastsam,rng]",

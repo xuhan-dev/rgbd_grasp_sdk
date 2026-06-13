@@ -4,6 +4,7 @@ import sys
 
 import torch
 
+import rgbd_grasp_sdk.compat.pytorch3d_ops as pytorch3d_ops
 from rgbd_grasp_sdk.compat.pytorch3d_ops import (
     install_mpl_toolkits_namespace_fix,
     install_rng_compat_fallbacks,
@@ -43,6 +44,11 @@ def test_install_rng_compat_fallbacks_loads_third_party_grasp_nms(
     monkeypatch, tmp_path
 ):
     monkeypatch.delitem(sys.modules, "grasp_nms", raising=False)
+    monkeypatch.setattr(
+        pytorch3d_ops,
+        "_module_spec_exists",
+        lambda name: False if name == "grasp_nms" else True,
+    )
     grasp_nms_dir = tmp_path / "third_party" / "grasp_nms"
     grasp_nms_dir.mkdir(parents=True)
     (grasp_nms_dir / "grasp_nms.py").write_text(

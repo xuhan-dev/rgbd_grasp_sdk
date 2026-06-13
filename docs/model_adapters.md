@@ -28,6 +28,10 @@ segmentation:
 
 ```bash
 pip install -e ".[rng]"
+python3 -m pip install --force-reinstall --index-url https://download.pytorch.org/whl/cu121 torch==2.4.1+cu121 torchvision==0.19.1+cu121
+python3 -m pip install iopath
+python3 -m pip install pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py310_cu121_pyt241/download.html
+python3 -m pip install grasp_nms
 ```
 
 `RegionNormalizedGrasp` 通过 `third_party/RegionNormalizedGrasp` 子模块接入。
@@ -35,9 +39,9 @@ pip install -e ".[rng]"
 真实 GPU smoke test 需要注意：
 
 - PyTorch 轮子必须匹配本机 NVIDIA 驱动支持的 CUDA 版本。
+- 当前已验证组合：`torch==2.4.1+cu121`、`torchvision==0.19.1+cu121`、`pytorch3d==0.7.8`、`grasp_nms==1.0.2`。
 - RNG 配置中的相机内参路径需要放在 `grasping.model_config.intrinsics_path`，该目录下应包含 `camera_intrinsics.npz`。
-- 旧 RNG 代码还会依赖 `pytorch3d` 和 `grasp_nms`。SDK 会优先使用真实 `pytorch3d`；缺失时自动注册 `rgbd_grasp_sdk.compat.pytorch3d_ops` 中的轻量 fallback。
-- `grasp_nms` 从 `third_party/grasp_nms/grasp_nms.py` 加载。当前 fallback 不执行真正 NMS，只用于 smoke test 和功能连通性验证；生产环境建议替换为编译版实现。
+- 旧 RNG 代码依赖真实 `pytorch3d` 和真实 `grasp_nms`。SDK 默认不启用轻量 fallback；只有显式配置 `allow_dependency_fallbacks: true` 时才会注册测试 fallback。
 
 本地 smoke 命令示例：
 
