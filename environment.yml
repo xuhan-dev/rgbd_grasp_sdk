@@ -1,0 +1,14 @@
+name: rgbd-grasp-sdk
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - numpy=1.23
+  - pyyaml
+  - pytest
+  - pip:
+      - -r requirements.txt
