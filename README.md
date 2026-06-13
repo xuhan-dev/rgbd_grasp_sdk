@@ -24,3 +24,16 @@ conda activate rgbd-grasp-sdk
 pip install -e ".[dev]"
 pytest -q
 ```
+
+## 单帧 CLI
+
+```bash
+python examples/run_image_pair.py \
+  --config configs/yolo_rng.yaml \
+  --rgb data/rgb.png \
+  --depth data/depth.png \
+  --intrinsics data/camera_intrinsics.npz \
+  --target apple
+```
+
+第一阶段的真实 YOLO/FastSAM/RNG adapter 尚未接入。CLI 主要用于验证配置、输入读取和 pipeline 组合方式。
