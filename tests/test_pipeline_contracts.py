@@ -31,3 +31,24 @@ def test_core_types_are_constructible():
     assert intrinsics.matrix.shape == (3, 3)
     assert result.best_grasp is grasp
     assert result.status is PipelineStatus.SUCCESS
+
+
+from rgbd_grasp_sdk.errors import BackendUnavailableError
+from rgbd_grasp_sdk.grasping.factory import create_grasp_predictor
+from rgbd_grasp_sdk.segmentation.factory import create_segmenter
+
+
+def test_unknown_backends_raise_clear_errors():
+    try:
+        create_segmenter("unknown", {})
+    except BackendUnavailableError as exc:
+        assert "未知分割 backend" in str(exc)
+    else:
+        raise AssertionError("create_segmenter should fail for unknown backend")
+
+    try:
+        create_grasp_predictor("unknown", {})
+    except BackendUnavailableError as exc:
+        assert "未知抓取 backend" in str(exc)
+    else:
+        raise AssertionError("create_grasp_predictor should fail for unknown backend")
