@@ -5,7 +5,7 @@ from typing import Any
 
 from rgbd_grasp_sdk.errors import BackendUnavailableError
 from rgbd_grasp_sdk.grasping.rng_adapter_utils import rng_grasp_to_candidate
-from rgbd_grasp_sdk.types import GraspPredictionResult, GraspRequest
+from rgbd_grasp_sdk.types import CameraIntrinsics, GraspPredictionResult, GraspRequest
 
 
 class RngGraspPredictor:
@@ -23,7 +23,7 @@ class RngGraspPredictor:
             candidates.append(
                 rng_grasp_to_candidate(
                     grasp,
-                    center_px=_infer_center_px(grasp),
+                    center_px=_infer_center_px(grasp, request.intrinsics),
                 )
             )
         return GraspPredictionResult(
@@ -43,10 +43,19 @@ class RngGraspPredictor:
         return load_rng_predictor(self.options)
 
 
-def _infer_center_px(grasp: Any) -> tuple[int, int]:
+def _infer_center_px(grasp: Any, intrinsics: CameraIntrinsics) -> tuple[int, int]:
     center = getattr(grasp, "center_px", None)
     if center is None:
         center = getattr(grasp, "center", None)
     if center is None:
-        return (0, 0)
+        translation = getattr(grasp, "translation", None)
+        if translation is None:
+            return (0, 0)
+        x, y, z = translation
+        if z == 0:
+            return (0, 0)
+        return (
+            int(round(float(x) * intrinsics.fx / float(z) + intrinsics.cx)),
+            int(round(float(y) * intrinsics.fy / float(z) + intrinsics.cy)),
+        )
     return (int(center[0]), int(center[1]))

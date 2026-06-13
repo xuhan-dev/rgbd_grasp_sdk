@@ -4,6 +4,7 @@ import pytest
 from rgbd_grasp_sdk.errors import BackendUnavailableError
 from rgbd_grasp_sdk.grasping.rng_adapter_utils import rng_grasp_to_candidate
 from rgbd_grasp_sdk.grasping.rng_predictor import RngGraspPredictor
+from rgbd_grasp_sdk.types import CameraIntrinsics, GraspRequest
 
 
 class FakeRngGrasp:
@@ -26,3 +27,20 @@ def test_rng_grasp_to_candidate_converts_pose_and_center():
 def test_rng_predictor_reports_missing_checkpoint_before_importing_heavy_model():
     with pytest.raises(BackendUnavailableError, match="checkpoint_path"):
         RngGraspPredictor({})
+
+
+def test_rng_predictor_projects_translation_to_center_px_when_missing():
+    class FakePredictor:
+        def predict(self, rgb, depth, vis=False):
+            return [FakeRngGrasp()], None
+
+    predictor = RngGraspPredictor({}, predictor=FakePredictor())
+    result = predictor.predict(
+        GraspRequest(
+            rgb=np.zeros((2, 2, 3), dtype=np.uint8),
+            depth=np.zeros((2, 2), dtype=np.uint16),
+            intrinsics=CameraIntrinsics(fx=100.0, fy=100.0, cx=10.0, cy=20.0),
+        )
+    )
+
+    assert result.candidates[0].center_px == (43, 87)

@@ -10,6 +10,8 @@ grasping:
   checkpoint_path: <project-root>/third_party/RegionNormalizedGrasp/checkpoints/realsense
   device: cuda
   input_size: [360, 640]
+  model_config:
+    intrinsics_path: <directory-containing-camera_intrinsics_npz>
 
 mask:
   merge_instances: true

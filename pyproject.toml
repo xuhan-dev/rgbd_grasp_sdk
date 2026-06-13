@@ -35,6 +35,11 @@ rng = [
   "transforms3d",
   "scikit-image",
   "trimesh",
+  "numba>=0.61,<0.62",
+  "cupoch",
+  "autolab_core",
+  "cvxopt",
+  "matplotlib>=3.10",
 ]
 all-models = [
   "rgbd-grasp-sdk[yolo,fastsam,rng]",
