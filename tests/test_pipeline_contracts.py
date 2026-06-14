@@ -136,6 +136,33 @@ def test_pipeline_passes_target_mask_to_ranker():
 def test_pipeline_visualizes_all_candidates_and_selected_grasp_when_enabled():
     calls = []
 
+    def visualizer(point_cloud, all_candidates, selected_grasp, target_mask):
+        calls.append((point_cloud, all_candidates, selected_grasp, target_mask))
+
+    pipeline = GraspPipeline(
+        segmenter=MockSegmenter(),
+        grasp_predictor=MockGraspPredictor(),
+        visualize_3d=True,
+        visualizer=visualizer,
+    )
+
+    result = pipeline.run(
+        rgb=np.zeros((6, 6, 3), dtype=np.uint8),
+        depth=np.ones((6, 6), dtype=np.uint16),
+        intrinsics=CameraIntrinsics(fx=600.0, fy=600.0, cx=3.0, cy=3.0),
+        target="apple",
+    )
+
+    assert result.status is PipelineStatus.SUCCESS
+    assert len(calls) == 1
+    assert len(calls[0][1]) == 2
+    assert calls[0][2] is result.best_grasp
+    assert calls[0][3][2, 3]
+
+
+def test_pipeline_supports_legacy_three_argument_visualizer():
+    calls = []
+
     def visualizer(point_cloud, all_candidates, selected_grasp):
         calls.append((point_cloud, all_candidates, selected_grasp))
 
@@ -155,7 +182,6 @@ def test_pipeline_visualizes_all_candidates_and_selected_grasp_when_enabled():
 
     assert result.status is PipelineStatus.SUCCESS
     assert len(calls) == 1
-    assert len(calls[0][1]) == 2
     assert calls[0][2] is result.best_grasp
 
 

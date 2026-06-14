@@ -110,7 +110,12 @@ class GraspPipeline:
             with timer.measure("ranking"):
                 ranked = self.ranker.rank(filtered, target_mask=target_mask)
             if self.visualize_3d:
-                self._visualize_prediction(prediction.point_cloud, prediction.candidates, ranked[0])
+                self._visualize_prediction(
+                    prediction.point_cloud,
+                    prediction.candidates,
+                    ranked[0],
+                    target_mask,
+                )
 
         return PipelineResult(
             status=PipelineStatus.SUCCESS,
@@ -128,10 +133,14 @@ class GraspPipeline:
         point_cloud: Any,
         all_candidates: list,
         selected_grasp: Any,
+        target_mask: np.ndarray,
     ) -> None:
         visualizer = self.visualizer
         if visualizer is None:
             from rgbd_grasp_sdk.visualization import visualize_grasp_candidates
 
             visualizer = visualize_grasp_candidates
-        visualizer(point_cloud, all_candidates, selected_grasp)
+        try:
+            visualizer(point_cloud, all_candidates, selected_grasp, target_mask)
+        except TypeError:
+            visualizer(point_cloud, all_candidates, selected_grasp)

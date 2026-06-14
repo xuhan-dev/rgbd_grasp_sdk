@@ -10,24 +10,54 @@ from rgbd_grasp_sdk.types import GraspCandidate, Pose6D
 
 ALL_GRASP_COLOR = (0.55, 0.55, 0.55)
 SELECTED_GRASP_COLOR = (1.0, 0.0, 0.0)
+TARGET_MASK_OVERLAY_COLOR = (0.0, 1.0, 0.75)
+TARGET_MASK_OVERLAY_ALPHA = 0.55
 
 
 def visualize_grasp_candidates(
     point_cloud: Any,
     all_candidates: list[GraspCandidate],
     selected_grasp: GraspCandidate,
+    target_mask: np.ndarray | None = None,
 ) -> None:
     import open3d as o3d
 
     geometries = []
     if point_cloud is not None:
-        geometries.append(point_cloud)
+        geometries.append(_apply_target_mask_overlay(point_cloud, target_mask))
 
     geometries.extend(
         _candidate_to_gripper_mesh(candidate, ALL_GRASP_COLOR) for candidate in all_candidates
     )
     geometries.append(_candidate_to_gripper_mesh(selected_grasp, SELECTED_GRASP_COLOR))
     o3d.visualization.draw_geometries(geometries)
+
+
+def _apply_target_mask_overlay(point_cloud: Any, target_mask: np.ndarray | None) -> Any:
+    if target_mask is None:
+        return point_cloud
+
+    import open3d as o3d
+
+    points = np.asarray(point_cloud.points)
+    if points.shape[0] != target_mask.size:
+        return point_cloud
+
+    if point_cloud.has_colors():
+        colors = np.asarray(point_cloud.colors, dtype=float).copy()
+    else:
+        colors = np.tile(np.array([[0.7, 0.7, 0.7]], dtype=float), (points.shape[0], 1))
+
+    mask_flat = target_mask.astype(bool).reshape(-1)
+    overlay = np.asarray(TARGET_MASK_OVERLAY_COLOR, dtype=float)
+    colors[mask_flat] = (
+        colors[mask_flat] * (1.0 - TARGET_MASK_OVERLAY_ALPHA)
+        + overlay * TARGET_MASK_OVERLAY_ALPHA
+    )
+
+    colored = o3d.geometry.PointCloud(point_cloud)
+    colored.colors = o3d.utility.Vector3dVector(np.clip(colors, 0.0, 1.0))
+    return colored
 
 
 def _candidate_to_gripper_mesh(

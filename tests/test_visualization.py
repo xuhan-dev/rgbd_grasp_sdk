@@ -5,6 +5,8 @@ from rgbd_grasp_sdk.types import GraspCandidate, Pose6D
 from rgbd_grasp_sdk.visualization.grasp_scene import (
     ALL_GRASP_COLOR,
     SELECTED_GRASP_COLOR,
+    TARGET_MASK_OVERLAY_COLOR,
+    _apply_target_mask_overlay,
     _candidate_to_gripper_mesh,
 )
 
@@ -34,3 +36,39 @@ def test_grasp_visualization_uses_distinct_colors_for_all_and_selected():
         np.tile(SELECTED_GRASP_COLOR, (len(selected_grasp.vertices), 1)),
     )
     assert not np.allclose(all_colors, selected_colors)
+
+
+def test_target_mask_overlay_preserves_base_point_cloud_colors():
+    o3d = pytest.importorskip("open3d")
+    point_cloud = o3d.geometry.PointCloud()
+    point_cloud.points = o3d.utility.Vector3dVector(
+        np.array(
+            [
+                [0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [1.0, 1.0, 0.0],
+            ],
+            dtype=float,
+        )
+    )
+    base_colors = np.array(
+        [
+            [0.1, 0.2, 0.3],
+            [0.2, 0.3, 0.4],
+            [0.3, 0.4, 0.5],
+            [0.4, 0.5, 0.6],
+        ],
+        dtype=float,
+    )
+    point_cloud.colors = o3d.utility.Vector3dVector(base_colors)
+    target_mask = np.array([[True, False], [False, True]])
+
+    colored = _apply_target_mask_overlay(point_cloud, target_mask)
+
+    colors = np.asarray(colored.colors)
+    expected_target_color = base_colors[0] * 0.45 + np.asarray(TARGET_MASK_OVERLAY_COLOR) * 0.55
+    assert np.allclose(colors[0], expected_target_color)
+    assert np.allclose(colors[1], base_colors[1])
+    assert np.allclose(colors[2], base_colors[2])
+    assert not np.shares_memory(colors, base_colors)
