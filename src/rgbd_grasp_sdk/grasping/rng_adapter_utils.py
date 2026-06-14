@@ -9,9 +9,8 @@ from rgbd_grasp_sdk.types import GraspCandidate, Pose6D
 
 def rng_grasp_to_candidate(rng_grasp: Any, center_px: tuple[int, int]) -> GraspCandidate:
     translation = np.asarray(rng_grasp.translation, dtype=float)
-    roll, pitch, yaw = _rotation_matrix_to_euler_xyz(
-        np.asarray(rng_grasp.rotation, dtype=float)
-    )
+    rotation = np.asarray(rng_grasp.rotation, dtype=float)
+    roll, pitch, yaw = _rotation_matrix_to_euler_xyz(rotation)
     return GraspCandidate(
         pose=Pose6D(
             x=float(translation[0]),
@@ -24,7 +23,11 @@ def rng_grasp_to_candidate(rng_grasp: Any, center_px: tuple[int, int]) -> GraspC
         score=float(getattr(rng_grasp, "score", 0.0)),
         center_px=center_px,
         width=float(getattr(rng_grasp, "width", 0.0)),
-        metadata={"source": "rng"},
+        metadata={
+            "source": "rng",
+            "rotation_matrix": rotation.tolist(),
+            "depth": float(getattr(rng_grasp, "depth", 0.0)),
+        },
     )
 
 

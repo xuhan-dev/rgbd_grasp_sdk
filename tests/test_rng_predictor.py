@@ -10,6 +10,8 @@ from rgbd_grasp_sdk.types import CameraIntrinsics, GraspRequest
 class FakeRngGrasp:
     score = 0.7
     width = 0.05
+    height = 0.002
+    depth = 0.03
     translation = np.array([0.1, 0.2, 0.3])
     rotation = np.eye(3)
 
@@ -22,6 +24,8 @@ def test_rng_grasp_to_candidate_converts_pose_and_center():
     assert candidate.center_px == (12, 34)
     assert candidate.pose.x == 0.1
     assert candidate.pose.z == 0.3
+    assert candidate.metadata["rotation_matrix"] == np.eye(3).tolist()
+    assert candidate.metadata["depth"] == 0.03
 
 
 def test_rng_predictor_reports_missing_checkpoint_before_importing_heavy_model():

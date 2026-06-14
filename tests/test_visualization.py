@@ -7,6 +7,7 @@ from rgbd_grasp_sdk.visualization.grasp_scene import (
     SELECTED_GRASP_COLOR,
     TARGET_MASK_OVERLAY_COLOR,
     _apply_target_mask_overlay,
+    _candidate_gripper_mesh,
     _candidate_to_gripper_mesh,
 )
 
@@ -72,3 +73,33 @@ def test_target_mask_overlay_preserves_base_point_cloud_colors():
     assert np.allclose(colors[1], base_colors[1])
     assert np.allclose(colors[2], base_colors[2])
     assert not np.shares_memory(colors, base_colors)
+
+
+def test_gripper_mesh_uses_raw_rng_rotation_and_depth_metadata():
+    rotation = np.array(
+        [
+            [0.0, -1.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ],
+        dtype=float,
+    )
+    candidate = GraspCandidate(
+        pose=Pose6D(0.1, 0.2, 0.3, 0.0, 0.0, 0.0),
+        score=0.8,
+        center_px=(10, 10),
+        width=0.06,
+        metadata={
+            "rotation_matrix": rotation.tolist(),
+            "depth": 0.03,
+        },
+    )
+
+    vertices, _ = _candidate_gripper_mesh(candidate)
+
+    center = np.array([candidate.pose.x, candidate.pose.y, candidate.pose.z])
+    local = (vertices - center) @ rotation
+    assert np.isclose(local[:, 0].min(), -0.064)
+    assert np.isclose(local[:, 0].max(), 0.03)
+    assert np.isclose(local[:, 1].min(), -0.034)
+    assert np.isclose(local[:, 1].max(), 0.034)

@@ -76,7 +76,7 @@ def _candidate_to_gripper_mesh(
 
 def _candidate_gripper_mesh(candidate: GraspCandidate) -> tuple[np.ndarray, np.ndarray]:
     pose = candidate.pose
-    rotation = _euler_xyz_to_matrix(pose)
+    rotation = _candidate_rotation_matrix(candidate)
     center = np.array([pose.x, pose.y, pose.z], dtype=float)
     width = float(candidate.width or 0.06)
     scale = 1.0
@@ -84,7 +84,7 @@ def _candidate_gripper_mesh(candidate: GraspCandidate) -> tuple[np.ndarray, np.n
     height = 0.002 * scale
     tail_length = 0.04
     depth_base = 0.02
-    depth = max(width * 0.5, 0.02)
+    depth = float(candidate.metadata.get("depth") or max(width * 0.5, 0.02))
 
     left_points, left_triangles = _create_mesh_box(
         depth + depth_base + finger_width,
@@ -127,6 +127,15 @@ def _candidate_gripper_mesh(candidate: GraspCandidate) -> tuple[np.ndarray, np.n
         axis=0,
     )
     return vertices, triangles
+
+
+def _candidate_rotation_matrix(candidate: GraspCandidate) -> np.ndarray:
+    raw_rotation = candidate.metadata.get("rotation_matrix")
+    if raw_rotation is not None:
+        rotation = np.asarray(raw_rotation, dtype=float)
+        if rotation.shape == (3, 3):
+            return rotation
+    return _euler_xyz_to_matrix(candidate.pose)
 
 
 def _create_mesh_box(width: float, height: float, depth: float) -> tuple[np.ndarray, np.ndarray]:
