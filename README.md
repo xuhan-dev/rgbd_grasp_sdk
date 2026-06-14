@@ -1,31 +1,84 @@
 # RGB-D Grasp SDK
 
-一个模块化 RGB-D 目标分割和 6DoF 抓取预测 SDK。
+模块化 RGB-D 目标分割与 6DoF 抓取预测 SDK。
 
-第一阶段目标：
+本项目从 RGB-D 图像中识别目标物体，生成目标区域 mask，调用 RegionNormalizedGrasp 预测 6DoF 抓取候选，并输出最佳抓取结果、候选列表和本地 TF JSON。核心 pipeline 不绑定机械臂、相机驱动、DDS、ROS2、HTTP 或长期运行服务，便于后续替换分割模型、抓取模型、排序策略和外部发布方式。
 
-- 输入 RGB、depth、相机内参和目标描述。
-- 通过可替换 `Segmenter` 生成目标 mask。
-- 通过可替换 `GraspPredictor` 生成抓取候选。
-- 过滤、排序并返回结构化结果。
+## Features
 
-第一阶段不包含：
+- RGB-D 单帧输入：RGB、depth、相机内参、目标文本或类别。
+- 可替换目标分割后端：YOLO、FastSAM 适配入口。
+- 可替换抓取预测后端：RegionNormalizedGrasp 适配入口。
+- mask-aware 抓取排序：`center_in_mask`、`mask_overlap_ratio`、`target_score`、`final_score`。
+- 本地结果输出：
+  - 完整 pipeline JSON
+  - 抓取 TF JSON
+- 3D 可视化开关：全部候选夹爪与最终夹爪使用不同颜色。
+- GraspNet-1Billion 演示数据整理工具。
+- 真实 GPU smoke 脚本。
+
+## Non-Goals
+
+当前项目不包含：
 
 - 机械臂控制。
-- 相机控制。
+- 相机采集驱动。
 - DDS/FastDDS。
-- ROS2/HTTP/ZeroMQ 发布。
+- ROS2、HTTP、ZeroMQ 服务入口。
+- 权重或公开数据集文件入库。
 
-## 开发环境
+## Repository Layout
+
+```text
+src/rgbd_grasp_sdk/
+  segmentation/      目标分割适配器
+  grasping/          RNG 抓取预测适配器
+  filtering/         mask 与候选过滤
+  ranking/           mask-aware 排序
+  pipeline/          主流程编排
+  publishers/        本地 JSON / TF 输出
+  visualization/     3D 可视化
+  serialization/     结果序列化
+  config/            YAML 配置加载
+  compat/            第三方兼容层
+
+examples/            CLI 示例
+configs/             示例配置
+scripts/             环境、smoke、数据整理脚本
+docs/                项目文档
+third_party/         第三方源码或子模块
+```
+
+## Quick Start
+
+基础开发环境：
 
 ```bash
-conda env create -f environment.yml
-conda activate rgbd-grasp-sdk
-pip install -e ".[dev]"
+scripts/setup_env.sh --mode dev
 pytest -q
 ```
 
-## 单帧 CLI
+YOLO 分割环境：
+
+```bash
+scripts/setup_env.sh --mode yolo
+```
+
+真实 RNG/GPU 环境：
+
+```bash
+scripts/setup_env.sh --mode rng --cuda cu121
+```
+
+完整模型环境：
+
+```bash
+scripts/setup_env.sh --mode all --cuda cu121 --run-tests
+```
+
+脚本不会下载模型权重或公开数据集。权重和数据请放在 `data/`、`third_party/` 或配置文件指定路径中。
+
+## Single-Frame CLI
 
 ```bash
 python examples/run_image_pair.py \
@@ -35,40 +88,68 @@ python examples/run_image_pair.py \
   --intrinsics data/camera_intrinsics.npz \
   --target apple \
   --output-json outputs/result.json \
-  --output-transform-json outputs/grasp_tf.json
+  --output-transform-json outputs/grasp_tf.json \
+  --no-visualize-3d
 ```
 
-CLI 可用于验证配置、输入读取、pipeline 组合方式和 JSON 输出；真实模型运行仍依赖相应 extras、权重和运行环境。
+输出：
 
-## 第二阶段模型接入
+- `outputs/result.json`: 完整 pipeline 结果。
+- `outputs/grasp_tf.json`: 外部系统可消费的本地 TF message。
 
-基础包仍保持轻量导入。真实模型依赖通过 extras 安装：
+## Real GPU Smoke
+
+真实依赖、真实权重和 GPU 环境准备好后运行：
 
 ```bash
-pip install -e ".[yolo]"
-pip install -e ".[rng]"
+scripts/smoke_real_gpu.sh
 ```
 
-单帧 smoke test 示例：
+预期输出包含：
 
-```bash
-python examples/run_image_pair.py \
-  --config configs/smoke_yolo_rng.yaml \
-  --rgb data/rgb.png \
-  --depth data/depth.png \
-  --intrinsics data/camera_intrinsics.npz \
-  --target apple \
-  --output-json outputs/result.json
+```text
+cuda_available True
+status: success
+best_score:
+best_center_px:
 ```
-
-## Smoke Tests
-
-详见 `docs/smoke_tests.md`。
-
-## Deployment
-
-详见 `docs/deployment.md`。
 
 ## Demo Data
 
+GraspNet-1Billion 原始数据下载后，可以抽取单帧为项目统一输入格式：
+
+```bash
+scripts/prepare_graspnet_demo.py \
+  --root data/raw/graspnet \
+  --output-dir data/demo/graspnet_scene_0000_frame_0000 \
+  --scene-id 0 \
+  --frame-id 0 \
+  --camera realsense \
+  --target apple
+```
+
 详见 `docs/demo_data.md`。
+
+## Documentation
+
+- `docs/installation.md`: 环境安装与一键配置脚本。
+- `docs/architecture.md`: 架构和模块边界。
+- `docs/model_adapters.md`: YOLO、FastSAM、RegionNormalizedGrasp 适配说明。
+- `docs/deployment.md`: 真实环境部署说明。
+- `docs/demo_data.md`: GraspNet 演示数据准备。
+- `docs/smoke_tests.md`: 单元测试和真实 GPU smoke。
+- `docs/transform_contract.md`: 抓取 TF 输出合约。
+
+## Development
+
+```bash
+scripts/setup_env.sh --mode dev
+pytest -q
+```
+
+提交前建议运行：
+
+```bash
+pytest -q
+git diff --check
+```

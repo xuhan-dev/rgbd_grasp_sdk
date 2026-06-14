@@ -16,12 +16,11 @@
 基础安装：
 
 ```bash
-pip install -e ".[dev]"
-pip install -e ".[yolo]"
-pip install -e ".[rng]"
+scripts/setup_env.sh --mode all --cuda cu121
 ```
 
 真实 RNG 环境需要安装匹配的 PyTorch、PyTorch3D 和 `grasp_nms`。安装命令见 `docs/model_adapters.md`。
+更完整的环境说明见 `docs/installation.md`。
 
 ## Third-Party Layout
 

@@ -3,6 +3,7 @@
 ## Unit Tests
 
 ```bash
+scripts/setup_env.sh --mode dev
 pytest -q
 ```
 

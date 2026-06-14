@@ -27,11 +27,7 @@ segmentation:
 安装：
 
 ```bash
-pip install -e ".[rng]"
-python3 -m pip install --force-reinstall --index-url https://download.pytorch.org/whl/cu121 torch==2.4.1+cu121 torchvision==0.19.1+cu121
-python3 -m pip install iopath
-python3 -m pip install pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py310_cu121_pyt241/download.html
-python3 -m pip install grasp_nms
+scripts/setup_env.sh --mode rng --cuda cu121
 ```
 
 `RegionNormalizedGrasp` 通过 `third_party/RegionNormalizedGrasp` 子模块接入。
