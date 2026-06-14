@@ -68,3 +68,7 @@ python examples/run_image_pair.py \
 ## Deployment
 
 详见 `docs/deployment.md`。
+
+## Demo Data
+
+详见 `docs/demo_data.md`。

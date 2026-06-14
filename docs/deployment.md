@@ -102,6 +102,8 @@ python examples/run_image_pair.py \
 - `outputs/result.json`: 完整 pipeline 结果。
 - `outputs/grasp_tf.json`: 外部系统可消费的本地 TF message。
 
+如需使用 GraspNet-1Billion 抽帧作为正式演示数据，详见 `docs/demo_data.md`。
+
 ## Real GPU Smoke
 
 ```bash
