@@ -58,3 +58,7 @@ python examples/run_image_pair.py \
   --target apple \
   --output-json outputs/result.json
 ```
+
+## Smoke Tests
+
+详见 `docs/smoke_tests.md`。

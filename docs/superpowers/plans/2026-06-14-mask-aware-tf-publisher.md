@@ -861,9 +861,9 @@ python3 examples/run_image_pair.py \
   --config configs/smoke_yolo_rng.yaml \
   --rgb third_party/RegionNormalizedGrasp/images/demo_rgb.png \
   --depth third_party/RegionNormalizedGrasp/images/demo_depth.png \
-  --intrinsics /tmp/rgbd_grasp_smoke/camera_intrinsics.npz \
+  --intrinsics data/smoke/camera_intrinsics.npz \
   --target microwave \
-  --output-json /tmp/rgbd_grasp_smoke/result.json \
+  --output-json outputs/smoke/result.json \
   --no-visualize-3d
 ```
 

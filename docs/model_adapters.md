@@ -46,15 +46,10 @@ python3 -m pip install grasp_nms
 本地 smoke 命令示例：
 
 ```bash
-PYTHONPATH=../sam_rng:../sam_rng/RegionNormalizedGrasp \
-python3 examples/run_image_pair.py \
-  --config /tmp/rgbd_grasp_smoke/smoke_yolo_rng.yaml \
-  --rgb third_party/RegionNormalizedGrasp/images/demo_rgb.png \
-  --depth third_party/RegionNormalizedGrasp/images/demo_depth.png \
-  --intrinsics /tmp/rgbd_grasp_smoke/camera_intrinsics.npz \
-  --target microwave \
-  --output-json /tmp/rgbd_grasp_smoke/result.json
+scripts/smoke_real_gpu.sh
 ```
+
+脚本默认使用 `data/smoke/smoke_yolo_rng.yaml`、`data/smoke/camera_intrinsics.npz` 和 `outputs/smoke/result.json`，这些路径可以通过环境变量覆盖。
 
 默认不打开 3D 可视化窗口，避免自动化 smoke 被 GUI 阻塞。需要查看最终抓取结果时，可以在配置中设置：
 
