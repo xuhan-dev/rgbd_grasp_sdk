@@ -36,15 +36,18 @@ def prepare_sample(
     rgb_path = scene_path / "rgb" / f"{frame_id:04d}.png"
     depth_path = scene_path / "depth" / f"{frame_id:04d}.png"
     meta_path = scene_path / "meta" / f"{frame_id:04d}.npz"
+    camk_path = scene_path / "camK.npy"
 
     _require_file(rgb_path)
     _require_file(depth_path)
-    _require_file(meta_path)
 
     output_path.mkdir(parents=True, exist_ok=True)
     shutil.copy2(rgb_path, output_path / "rgb.png")
     shutil.copy2(depth_path, output_path / "depth.png")
-    np.savez(output_path / "camera_intrinsics.npz", K=_load_intrinsic_matrix(meta_path))
+    np.savez(
+        output_path / "camera_intrinsics.npz",
+        K=_load_intrinsic_matrix(meta_path, camk_path),
+    )
     metadata = {
         "dataset": "GraspNet-1Billion",
         "source_root": str(root_path),
@@ -62,7 +65,9 @@ def prepare_sample(
     )
 
 
-def _load_intrinsic_matrix(meta_path: Path) -> np.ndarray:
+def _load_intrinsic_matrix(meta_path: Path, camk_path: Path) -> np.ndarray:
+    if not meta_path.exists():
+        return _load_camk_matrix(camk_path)
     data = np.load(meta_path)
     for key in ("intrinsic_matrix", "K", "camera_intrinsic"):
         if key in data:
@@ -70,7 +75,17 @@ def _load_intrinsic_matrix(meta_path: Path) -> np.ndarray:
             if matrix.shape != (3, 3):
                 raise ValueError(f"内参矩阵必须是 3x3: {meta_path}:{key}")
             return matrix
+    if camk_path.exists():
+        return _load_camk_matrix(camk_path)
     raise ValueError(f"GraspNet meta 文件缺少 intrinsic_matrix/K/camera_intrinsic: {meta_path}")
+
+
+def _load_camk_matrix(camk_path: Path) -> np.ndarray:
+    _require_file(camk_path)
+    matrix = np.asarray(np.load(camk_path), dtype=np.float32)
+    if matrix.shape != (3, 3):
+        raise ValueError(f"camK.npy 必须是 3x3 矩阵: {camk_path}")
+    return matrix
 
 
 def _require_file(path: Path) -> None:

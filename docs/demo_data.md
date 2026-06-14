@@ -8,6 +8,35 @@ GraspNet 官网：
 https://www.graspnet.net/
 ```
 
+官方数据下载页：
+
+```text
+https://graspnet.net/datasets.html
+```
+
+原始 RGB-D 场景以 zip 分包提供。常见分包包括：
+
+- `train_1.zip`
+- `train_2.zip`
+- `train_3.zip`
+- `train_4.zip`
+- `test_seen.zip`
+- `test_similar.zip`
+- `test_novel.zip`
+
+这些文件体积较大，Google Drive 链接可能触发下载限流。若命令行下载失败，请通过浏览器或网盘客户端下载，并把 zip 放到：
+
+```text
+data/raw/graspnet_downloads/
+```
+
+解压后确保根目录包含：
+
+```text
+data/raw/graspnet/
+  scenes/
+```
+
 ## Expected Input Layout
 
 抽帧脚本支持常见 GraspNet 场景目录：
@@ -25,11 +54,19 @@ https://www.graspnet.net/
           0000.npz
 ```
 
-`meta/0000.npz` 中应包含以下任一 3x3 内参矩阵字段：
+脚本支持两种内参来源。
+
+`meta/0000.npz` 中包含以下任一 3x3 内参矩阵字段：
 
 - `intrinsic_matrix`
 - `K`
 - `camera_intrinsic`
+
+或官方原始目录中的相机级内参：
+
+```text
+<graspnet-root>/scenes/scene_0000/realsense/camK.npy
+```
 
 ## Prepare One Demo Frame
 
@@ -42,6 +79,14 @@ scripts/prepare_graspnet_demo.py \
   --camera realsense \
   --target apple
 ```
+
+如果使用 `train_4.zip`，场景编号通常不是从 0 开始。可以先查看可用场景：
+
+```bash
+find data/raw/graspnet/scenes -maxdepth 1 -type d | sort | head
+```
+
+然后把 `--scene-id` 改成实际存在的编号。
 
 输出目录：
 
