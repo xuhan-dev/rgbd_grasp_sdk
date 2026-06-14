@@ -22,6 +22,15 @@ scripts/setup_env.sh --mode all --cuda cu121
 真实 RNG 环境需要安装匹配的 PyTorch、PyTorch3D 和 `grasp_nms`。安装命令见 `docs/model_adapters.md`。
 更完整的环境说明见 `docs/installation.md`。
 
+## License Checks
+
+部署前需要确认实际分发内容的许可证边界：
+
+- 主项目代码按 `LICENSE` 中的 Apache-2.0 使用。
+- Python 包、第三方源码和数据资产见 `THIRD_PARTY_LICENSES.md`。
+- 模型权重和 GraspNet 数据样例见 `MODEL_WEIGHTS.md`。
+- Docker 镜像、离线安装包和模型包都属于再分发形态，需要额外复核镜像内依赖、权重和数据条款。
+
 部署前可检查运行时依赖：
 
 ```bash

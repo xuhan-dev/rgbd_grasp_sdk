@@ -18,5 +18,6 @@ data/
 outputs/
 *.pt
 *.pth
+*.ckpt
 *.onnx
 *.engine

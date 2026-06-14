@@ -8,6 +8,16 @@ version = "0.1.0"
 description = "Modular RGB-D target segmentation and 6DoF grasp prediction SDK"
 readme = "README.md"
 requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [
+  {name = "Han"},
+]
+classifiers = [
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
   "numpy>=1.23,<2.0",
   "opencv-python>=4.8",

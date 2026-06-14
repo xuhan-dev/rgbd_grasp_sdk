@@ -146,6 +146,14 @@ scripts/prepare_graspnet_demo.py \
 - `docs/demo_data.md`: GraspNet 演示数据准备。
 - `docs/smoke_tests.md`: 单元测试和真实 GPU smoke。
 - `docs/transform_contract.md`: 抓取 TF 输出合约。
+- `THIRD_PARTY_LICENSES.md`: 第三方依赖、第三方源码和数据许可证清单。
+- `MODEL_WEIGHTS.md`: 模型权重和公开数据使用说明。
+
+## License
+
+主项目代码使用 Apache-2.0 许可证，详见 `LICENSE`。
+
+第三方源码、Python 依赖、模型权重和公开数据集按各自许可证或数据条款使用。发布 wheel、Docker 镜像、模型包或演示数据前，请先核对 `THIRD_PARTY_LICENSES.md` 和 `MODEL_WEIGHTS.md`。
 
 ## Development
 

@@ -19,6 +19,12 @@ scripts/setup_env.sh --mode dev
 
 脚本不会下载模型权重或公开数据集，只安装 Python 依赖。
 
+许可证治理入口：
+
+- 主项目许可证：`LICENSE`
+- 第三方依赖清单：`THIRD_PARTY_LICENSES.md`
+- 模型权重和数据说明：`MODEL_WEIGHTS.md`
+
 依赖分层文件位于：
 
 ```text
