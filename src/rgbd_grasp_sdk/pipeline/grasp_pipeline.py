@@ -108,7 +108,7 @@ class GraspPipeline:
                 )
 
             with timer.measure("ranking"):
-                ranked = self.ranker.rank(filtered)
+                ranked = self.ranker.rank(filtered, target_mask=target_mask)
             if self.visualize_3d:
                 self._visualize_prediction(prediction.point_cloud, prediction.candidates, ranked[0])
 

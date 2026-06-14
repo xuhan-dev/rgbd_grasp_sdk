@@ -9,6 +9,7 @@ from rgbd_grasp_sdk.config.loader import load_config
 from rgbd_grasp_sdk.grasping.factory import create_grasp_predictor
 from rgbd_grasp_sdk.io import read_depth, read_intrinsics_npz, read_rgb
 from rgbd_grasp_sdk.pipeline.grasp_pipeline import GraspPipeline
+from rgbd_grasp_sdk.ranking.factory import create_ranker
 from rgbd_grasp_sdk.serialization import pipeline_result_to_dict
 from rgbd_grasp_sdk.segmentation.factory import create_segmenter
 
@@ -43,6 +44,8 @@ def main() -> None:
     pipeline = GraspPipeline(
         segmenter=segmenter,
         grasp_predictor=grasp_predictor,
+        ranker=create_ranker(config.ranking),
+        mask_config=config.mask,
         visualize_3d=visualize_3d,
     )
 

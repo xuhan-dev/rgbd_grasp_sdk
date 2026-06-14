@@ -104,6 +104,35 @@ def test_pipeline_uses_injected_interfaces_and_filters_by_mask():
     assert "total" in result.timings
 
 
+class RecordingRanker:
+    def __init__(self):
+        self.received_mask = None
+
+    def rank(self, candidates, target_mask=None):
+        self.received_mask = target_mask
+        return candidates
+
+
+def test_pipeline_passes_target_mask_to_ranker():
+    ranker = RecordingRanker()
+    pipeline = GraspPipeline(
+        segmenter=MockSegmenter(),
+        grasp_predictor=MockGraspPredictor(),
+        ranker=ranker,
+    )
+
+    result = pipeline.run(
+        rgb=np.zeros((6, 6, 3), dtype=np.uint8),
+        depth=np.ones((6, 6), dtype=np.uint16),
+        intrinsics=CameraIntrinsics(fx=600.0, fy=600.0, cx=3.0, cy=3.0),
+        target="apple",
+    )
+
+    assert result.status is PipelineStatus.SUCCESS
+    assert ranker.received_mask is not None
+    assert ranker.received_mask[2, 3]
+
+
 def test_pipeline_visualizes_all_candidates_and_selected_grasp_when_enabled():
     calls = []
 
