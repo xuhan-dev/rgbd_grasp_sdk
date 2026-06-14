@@ -2,6 +2,7 @@ import json
 
 from rgbd_grasp_sdk.publishers.json_file import JsonFilePublisher
 from rgbd_grasp_sdk.publishers.stdout import StdoutPublisher
+from rgbd_grasp_sdk.publishers.transform_file import TransformJsonFilePublisher
 from rgbd_grasp_sdk.publishers.transform_message import best_grasp_to_transform_message
 from rgbd_grasp_sdk.types import GraspCandidate, PipelineResult, PipelineStatus, Pose6D
 
@@ -37,6 +38,16 @@ def test_json_file_publisher_writes_result(tmp_path):
     data = json.loads(output_path.read_text(encoding="utf-8"))
     assert data["status"] == "success"
     assert data["best_grasp"]["score"] == 0.9
+
+
+def test_transform_json_file_publisher_writes_transform_message(tmp_path):
+    output_path = tmp_path / "grasp_tf.json"
+    TransformJsonFilePublisher(output_path).publish(_result())
+
+    data = json.loads(output_path.read_text(encoding="utf-8"))
+    assert data["parent_frame"] == "camera_color_optical_frame"
+    assert data["child_frame"] == "grasp_tcp"
+    assert data["translation"] == {"x": 0.1, "y": 0.2, "z": 0.3}
 
 
 def test_stdout_publisher_prints_transform_message(capsys):

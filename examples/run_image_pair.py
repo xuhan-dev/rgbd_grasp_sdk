@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 import argparse
-import json
-from pathlib import Path
 from typing import Sequence
 
 from rgbd_grasp_sdk.config.loader import load_config
 from rgbd_grasp_sdk.grasping.factory import create_grasp_predictor
 from rgbd_grasp_sdk.io import read_depth, read_intrinsics_npz, read_rgb
 from rgbd_grasp_sdk.pipeline.grasp_pipeline import GraspPipeline
+from rgbd_grasp_sdk.publishers import JsonFilePublisher, TransformJsonFilePublisher
 from rgbd_grasp_sdk.ranking.factory import create_ranker
-from rgbd_grasp_sdk.serialization import pipeline_result_to_dict
 from rgbd_grasp_sdk.segmentation.factory import create_segmenter
+from rgbd_grasp_sdk.types import PipelineResult
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -22,6 +21,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--intrinsics", required=True, help="包含 K 的相机内参 npz")
     parser.add_argument("--target", required=True, help="目标类别或文本描述")
     parser.add_argument("--output-json", help="可选 JSON 结果输出路径")
+    parser.add_argument("--output-transform-json", help="可选抓取 TF JSON 输出路径")
     parser.add_argument(
         "--visualize-3d",
         action=argparse.BooleanOptionalAction,
@@ -65,13 +65,14 @@ def main() -> None:
         print(f"error: {result.error.code} - {result.error.message}")
     print(f"timings: {result.timings}")
 
+    _publish_outputs(result, args)
+
+
+def _publish_outputs(result: PipelineResult, args: argparse.Namespace) -> None:
     if args.output_json:
-        output_path = Path(args.output_json)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(
-            json.dumps(pipeline_result_to_dict(result), ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        JsonFilePublisher(args.output_json).publish(result)
+    if args.output_transform_json:
+        TransformJsonFilePublisher(args.output_transform_json).publish(result)
 
 
 if __name__ == "__main__":

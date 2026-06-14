@@ -48,3 +48,18 @@ best_center_px:
 ```
 
 该 smoke 默认使用 `--no-visualize-3d`，避免 Open3D GUI 阻塞自动化检查。
+
+## Local Transform JSON
+
+单帧 CLI 可以同时输出完整 pipeline 结果和抓取 TF message：
+
+```bash
+python examples/run_image_pair.py \
+  --config configs/yolo_rng.yaml \
+  --rgb data/rgb.png \
+  --depth data/depth.png \
+  --intrinsics data/camera_intrinsics.npz \
+  --target apple \
+  --output-json outputs/result.json \
+  --output-transform-json outputs/grasp_tf.json
+```

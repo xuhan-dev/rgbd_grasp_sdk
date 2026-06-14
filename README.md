@@ -33,7 +33,9 @@ python examples/run_image_pair.py \
   --rgb data/rgb.png \
   --depth data/depth.png \
   --intrinsics data/camera_intrinsics.npz \
-  --target apple
+  --target apple \
+  --output-json outputs/result.json \
+  --output-transform-json outputs/grasp_tf.json
 ```
 
 CLI 可用于验证配置、输入读取、pipeline 组合方式和 JSON 输出；真实模型运行仍依赖相应 extras、权重和运行环境。
