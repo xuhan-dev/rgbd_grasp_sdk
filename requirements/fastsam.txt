@@ -1,0 +1,6 @@
+-r base.txt
+torch>=1.11
+torchvision>=0.12
+ftfy
+regex
+tqdm

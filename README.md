@@ -78,6 +78,13 @@ scripts/setup_env.sh --mode all --cuda cu121 --run-tests
 
 脚本不会下载模型权重或公开数据集。权重和数据请放在 `data/`、`third_party/` 或配置文件指定路径中。
 
+运行时依赖检查：
+
+```bash
+scripts/check_runtime_deps.py --profile base
+scripts/check_runtime_deps.py --profile rng-cu121 --rng-checkpoint third_party/RegionNormalizedGrasp/checkpoints/realsense
+```
+
 ## Single-Frame CLI
 
 ```bash

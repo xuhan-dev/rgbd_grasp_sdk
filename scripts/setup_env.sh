@@ -4,6 +4,7 @@ set -euo pipefail
 MODE="dev"
 CUDA="cu121"
 RUN_TESTS="0"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 usage() {
   cat <<'EOF'
@@ -60,41 +61,35 @@ PY
 
 install_base() {
   python3 -m pip install --upgrade pip setuptools wheel
+  python3 -m pip install -r "${PROJECT_ROOT}/requirements/base.txt"
   python3 -m pip install -e .
 }
 
 install_dev() {
-  python3 -m pip install -e ".[dev]"
+  python3 -m pip install -r "${PROJECT_ROOT}/requirements/dev.txt"
 }
 
 install_yolo() {
-  python3 -m pip install -e ".[yolo]"
+  python3 -m pip install -r "${PROJECT_ROOT}/requirements/yolo.txt"
 }
 
 install_fastsam() {
-  python3 -m pip install -e ".[fastsam]"
+  python3 -m pip install -r "${PROJECT_ROOT}/requirements/fastsam.txt"
 }
 
 install_rng() {
   case "${CUDA}" in
     cu121)
-      python3 -m pip install --force-reinstall \
-        --index-url https://download.pytorch.org/whl/cu121 \
-        torch==2.4.1+cu121 torchvision==0.19.1+cu121
-      python3 -m pip install iopath
-      python3 -m pip install pytorch3d \
-        -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py310_cu121_pyt241/download.html
+      python3 -m pip install -r "${PROJECT_ROOT}/requirements/rng-cu121.txt"
       ;;
     cpu)
-      python3 -m pip install torch==2.4.1 torchvision==0.19.1
-      python3 -m pip install iopath
+      python3 -m pip install -r "${PROJECT_ROOT}/requirements/rng-cpu.txt"
       ;;
     *)
       echo "Unsupported --cuda value: ${CUDA}" >&2
       exit 2
       ;;
   esac
-  python3 -m pip install -e ".[rng]"
 }
 
 require_python

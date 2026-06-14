@@ -19,6 +19,21 @@ scripts/setup_env.sh --mode dev
 
 脚本不会下载模型权重或公开数据集，只安装 Python 依赖。
 
+依赖分层文件位于：
+
+```text
+requirements/
+  base.txt
+  dev.txt
+  yolo.txt
+  fastsam.txt
+  rng-common.txt
+  rng-cu121.txt
+  rng-cpu.txt
+```
+
+`scripts/setup_env.sh` 会读取这些文件安装依赖，避免把复杂 CUDA/PyTorch3D 细节写死在脚本逻辑中。
+
 ## Modes
 
 基础运行依赖：
@@ -129,6 +144,17 @@ third_party/
 
 ```bash
 pytest -q
+```
+
+运行时依赖检查：
+
+```bash
+scripts/check_runtime_deps.py --profile base
+scripts/check_runtime_deps.py --profile yolo --yolo-weights data/weights/yolo11x-seg.pt
+scripts/check_runtime_deps.py \
+  --profile rng-cu121 \
+  --rng-checkpoint third_party/RegionNormalizedGrasp/checkpoints/realsense \
+  --intrinsics data/smoke/camera_intrinsics.npz
 ```
 
 真实 GPU smoke：

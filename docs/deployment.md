@@ -22,6 +22,15 @@ scripts/setup_env.sh --mode all --cuda cu121
 真实 RNG 环境需要安装匹配的 PyTorch、PyTorch3D 和 `grasp_nms`。安装命令见 `docs/model_adapters.md`。
 更完整的环境说明见 `docs/installation.md`。
 
+部署前可检查运行时依赖：
+
+```bash
+scripts/check_runtime_deps.py \
+  --profile rng-cu121 \
+  --rng-checkpoint third_party/RegionNormalizedGrasp/checkpoints/realsense \
+  --intrinsics data/smoke/camera_intrinsics.npz
+```
+
 ## Third-Party Layout
 
 推荐 third-party 目录：
