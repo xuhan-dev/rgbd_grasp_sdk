@@ -38,14 +38,17 @@ class MaskAwareGraspRanker:
         candidate: GraspCandidate,
         target_mask: np.ndarray | None,
     ) -> GraspCandidate:
-        target_score = _target_score(candidate, target_mask)
+        center_in_mask = _center_in_mask(candidate, target_mask)
+        overlap_ratio = _mask_overlap_ratio(candidate, target_mask)
+        target_score = max(1.0 if center_in_mask else 0.0, overlap_ratio)
         rng_weight = float(self.config.weights.get("rng_score", 1.0))
         target_weight = float(self.config.weights.get("target_score", 0.0))
         final_score = candidate.score * rng_weight + target_score * target_weight
         metadata = dict(candidate.metadata)
         metadata.update(
             {
-                "center_in_mask": bool(target_score > 0.0),
+                "center_in_mask": center_in_mask,
+                "mask_overlap_ratio": float(overlap_ratio),
                 "target_score": float(target_score),
                 "final_score": float(final_score),
             }
@@ -59,13 +62,40 @@ class MaskAwareGraspRanker:
         )
 
 
-def _target_score(
+def _center_in_mask(
+    candidate: GraspCandidate,
+    target_mask: np.ndarray | None,
+) -> bool:
+    if target_mask is None or target_mask.size == 0:
+        return False
+    x, y = candidate.center_px
+    if y < 0 or x < 0 or y >= target_mask.shape[0] or x >= target_mask.shape[1]:
+        return False
+    return bool(target_mask[y, x])
+
+
+def _mask_overlap_ratio(
     candidate: GraspCandidate,
     target_mask: np.ndarray | None,
 ) -> float:
     if target_mask is None or target_mask.size == 0:
         return 0.0
     x, y = candidate.center_px
-    if y < 0 or x < 0 or y >= target_mask.shape[0] or x >= target_mask.shape[1]:
+    radius = _candidate_pixel_radius(candidate)
+    x_min = max(0, x - radius)
+    x_max = min(target_mask.shape[1], x + radius + 1)
+    y_min = max(0, y - radius)
+    y_max = min(target_mask.shape[0], y + radius + 1)
+    if x_min >= x_max or y_min >= y_max:
         return 0.0
-    return 1.0 if bool(target_mask[y, x]) else 0.0
+    target_area = int(np.count_nonzero(target_mask))
+    if target_area == 0:
+        return 0.0
+    region = target_mask[y_min:y_max, x_min:x_max]
+    return float(np.count_nonzero(region) / target_area)
+
+
+def _candidate_pixel_radius(candidate: GraspCandidate) -> int:
+    if candidate.width is None:
+        return 3
+    return max(3, int(round(float(candidate.width) * 100.0)))

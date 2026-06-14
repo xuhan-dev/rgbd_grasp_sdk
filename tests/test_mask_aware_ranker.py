@@ -15,10 +15,10 @@ def _candidate(score, center_px):
 
 
 def test_mask_aware_ranker_prefers_candidate_inside_target_mask():
-    mask = np.zeros((20, 20), dtype=bool)
-    mask[5:15, 5:15] = True
-    outside_high_score = _candidate(0.95, (1, 1))
-    inside_lower_score = _candidate(0.70, (10, 10))
+    mask = np.zeros((40, 40), dtype=bool)
+    mask[15:25, 15:25] = True
+    outside_high_score = _candidate(0.95, (0, 0))
+    inside_lower_score = _candidate(0.70, (20, 20))
     ranker = MaskAwareGraspRanker(
         RankingConfig(
             backend="mask_aware",
@@ -50,3 +50,24 @@ def test_mask_aware_ranker_can_require_center_inside_mask():
 
     assert len(ranked) == 1
     assert ranked[0].center_px == (10, 10)
+
+
+def test_mask_aware_ranker_scores_gripper_overlap_with_target_mask():
+    mask = np.zeros((30, 30), dtype=bool)
+    mask[10:15, 14:18] = True
+    overlap_candidate = _candidate(0.80, (10, 12))
+    far_candidate = _candidate(0.95, (1, 1))
+    ranker = MaskAwareGraspRanker(
+        RankingConfig(
+            backend="mask_aware",
+            weights={"rng_score": 0.4, "target_score": 0.6},
+        )
+    )
+
+    ranked = ranker.rank([far_candidate, overlap_candidate], target_mask=mask)
+
+    assert ranked[0].center_px == overlap_candidate.center_px
+    assert ranked[0].metadata["center_in_mask"] is False
+    assert ranked[0].metadata["mask_overlap_ratio"] > 0.0
+    assert ranked[0].metadata["target_score"] == ranked[0].metadata["mask_overlap_ratio"]
+    assert ranked[1].metadata["mask_overlap_ratio"] == 0.0
