@@ -24,56 +24,113 @@ def visualize_grasp_candidates(
         geometries.append(point_cloud)
 
     geometries.extend(
-        _candidate_to_line_set(candidate, ALL_GRASP_COLOR) for candidate in all_candidates
+        _candidate_to_gripper_mesh(candidate, ALL_GRASP_COLOR) for candidate in all_candidates
     )
-    geometries.append(_candidate_to_line_set(selected_grasp, SELECTED_GRASP_COLOR))
+    geometries.append(_candidate_to_gripper_mesh(selected_grasp, SELECTED_GRASP_COLOR))
     o3d.visualization.draw_geometries(geometries)
 
 
-def _candidate_to_line_set(
+def _candidate_to_gripper_mesh(
     candidate: GraspCandidate,
     color: tuple[float, float, float],
 ) -> Any:
     import open3d as o3d
 
-    points, lines = _candidate_gripper_lines(candidate)
-    line_set = o3d.geometry.LineSet()
-    line_set.points = o3d.utility.Vector3dVector(points)
-    line_set.lines = o3d.utility.Vector2iVector(lines)
-    line_set.colors = o3d.utility.Vector3dVector(np.tile(color, (len(lines), 1)))
-    return line_set
+    vertices, triangles = _candidate_gripper_mesh(candidate)
+    mesh = o3d.geometry.TriangleMesh()
+    mesh.vertices = o3d.utility.Vector3dVector(vertices)
+    mesh.triangles = o3d.utility.Vector3iVector(triangles)
+    mesh.vertex_colors = o3d.utility.Vector3dVector(np.tile(color, (len(vertices), 1)))
+    return mesh
 
 
-def _candidate_gripper_lines(candidate: GraspCandidate) -> tuple[np.ndarray, np.ndarray]:
+def _candidate_gripper_mesh(candidate: GraspCandidate) -> tuple[np.ndarray, np.ndarray]:
     pose = candidate.pose
     rotation = _euler_xyz_to_matrix(pose)
     center = np.array([pose.x, pose.y, pose.z], dtype=float)
     width = float(candidate.width or 0.06)
-    finger_length = max(width * 0.7, 0.03)
-    tail_length = max(width * 0.5, 0.025)
+    scale = 1.0
+    finger_width = 0.004 * scale
+    height = 0.002 * scale
+    tail_length = 0.04
+    depth_base = 0.02
+    depth = max(width * 0.5, 0.02)
 
-    local_points = np.array(
+    left_points, left_triangles = _create_mesh_box(
+        depth + depth_base + finger_width,
+        finger_width,
+        height,
+    )
+    left_points[:, 0] -= depth_base + finger_width
+    left_points[:, 1] -= width / 2 + finger_width
+    left_points[:, 2] -= height / 2
+
+    right_points, right_triangles = _create_mesh_box(
+        depth + depth_base + finger_width,
+        finger_width,
+        height,
+    )
+    right_triangles += 8
+    right_points[:, 0] -= depth_base + finger_width
+    right_points[:, 1] += width / 2
+    right_points[:, 2] -= height / 2
+
+    bottom_points, bottom_triangles = _create_mesh_box(finger_width, width, height)
+    bottom_triangles += 16
+    bottom_points[:, 0] -= finger_width + depth_base
+    bottom_points[:, 1] -= width / 2
+    bottom_points[:, 2] -= height / 2
+
+    tail_points, tail_triangles = _create_mesh_box(tail_length, finger_width, height)
+    tail_triangles += 24
+    tail_points[:, 0] -= tail_length + finger_width + depth_base
+    tail_points[:, 1] -= finger_width / 2
+    tail_points[:, 2] -= height / 2
+
+    vertices = np.concatenate(
+        [left_points, right_points, bottom_points, tail_points],
+        axis=0,
+    )
+    vertices = vertices @ rotation.T + center
+    triangles = np.concatenate(
+        [left_triangles, right_triangles, bottom_triangles, tail_triangles],
+        axis=0,
+    )
+    return vertices, triangles
+
+
+def _create_mesh_box(width: float, height: float, depth: float) -> tuple[np.ndarray, np.ndarray]:
+    vertices = np.array(
         [
-            [0.0, -width / 2.0, 0.0],
-            [0.0, width / 2.0, 0.0],
-            [finger_length, -width / 2.0, 0.0],
-            [finger_length, width / 2.0, 0.0],
-            [-tail_length, 0.0, 0.0],
+            [0, 0, 0],
+            [width, 0, 0],
+            [0, 0, depth],
+            [width, 0, depth],
+            [0, height, 0],
+            [width, height, 0],
+            [0, height, depth],
+            [width, height, depth],
         ],
         dtype=float,
     )
-    points = local_points @ rotation.T + center
-    lines = np.array(
+    triangles = np.array(
         [
-            [0, 1],
-            [0, 2],
-            [1, 3],
-            [4, 0],
-            [4, 1],
+            [4, 7, 5],
+            [4, 6, 7],
+            [0, 2, 4],
+            [2, 6, 4],
+            [0, 1, 2],
+            [1, 3, 2],
+            [1, 5, 7],
+            [1, 7, 3],
+            [2, 3, 7],
+            [2, 7, 6],
+            [0, 4, 1],
+            [1, 4, 5],
         ],
         dtype=np.int32,
     )
-    return points, lines
+    return vertices, triangles
 
 
 def _euler_xyz_to_matrix(pose: Pose6D) -> np.ndarray:
