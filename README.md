@@ -64,3 +64,7 @@ python examples/run_image_pair.py \
 ## Smoke Tests
 
 详见 `docs/smoke_tests.md`。
+
+## Deployment
+
+详见 `docs/deployment.md`。
