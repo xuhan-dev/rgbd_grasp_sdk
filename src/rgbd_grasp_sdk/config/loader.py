@@ -74,9 +74,21 @@ def _load_mask(data: Any) -> MaskConfig:
 
 def _load_ranking(data: Any) -> RankingConfig:
     backend, options = _require_backend("ranking", data)
+    raw_weights = options.get("weights", {})
+    if raw_weights is None:
+        raw_weights = {}
+    if not isinstance(raw_weights, dict):
+        raise ConfigError("ranking.weights 必须是对象")
+    weights = {
+        "rng_score": float(raw_weights.get("rng_score", 1.0)),
+        "target_score": float(raw_weights.get("target_score", 0.0)),
+    }
     return RankingConfig(
         backend=backend,
         top_k=int(options.get("top_k", 10)),
+        min_target_score=float(options.get("min_target_score", 0.0)),
+        require_center_in_mask=bool(options.get("require_center_in_mask", False)),
+        weights=weights,
     )
 
 

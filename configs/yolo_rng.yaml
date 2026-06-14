@@ -18,8 +18,13 @@ mask:
   min_area: 0
 
 ranking:
-  backend: default
+  backend: mask_aware
   top_k: 10
+  min_target_score: 0.0
+  require_center_in_mask: false
+  weights:
+    rng_score: 0.7
+    target_score: 0.3
 
 outputs:
   return_point_cloud: false

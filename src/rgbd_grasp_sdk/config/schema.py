@@ -28,6 +28,11 @@ class MaskConfig:
 class RankingConfig:
     backend: str = "default"
     top_k: int = 10
+    min_target_score: float = 0.0
+    require_center_in_mask: bool = False
+    weights: dict[str, float] = field(
+        default_factory=lambda: {"rng_score": 1.0, "target_score": 0.0}
+    )
 
 
 @dataclass(frozen=True)
