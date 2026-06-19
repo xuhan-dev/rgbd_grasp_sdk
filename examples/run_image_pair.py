@@ -4,7 +4,6 @@ import argparse
 from typing import Sequence
 
 from rgbd_grasp_sdk import RGBDGrasp
-from rgbd_grasp_sdk.publishers import JsonFilePublisher, TransformJsonFilePublisher
 from rgbd_grasp_sdk.types import PipelineResult
 
 
@@ -50,13 +49,6 @@ def _print_result(result: PipelineResult) -> None:
     if result.error is not None:
         print(f"error: {result.error.code} - {result.error.message}")
     print(f"timings: {result.timings}")
-
-
-def _publish_outputs(result: PipelineResult, args: argparse.Namespace) -> None:
-    if args.output_json:
-        JsonFilePublisher(args.output_json).publish(result)
-    if args.output_transform_json:
-        TransformJsonFilePublisher(args.output_transform_json).publish(result)
 
 
 if __name__ == "__main__":
