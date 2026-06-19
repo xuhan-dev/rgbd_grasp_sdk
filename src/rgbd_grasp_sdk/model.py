@@ -46,13 +46,20 @@ class RGBDGrasp:
         output_json: str | Path | None = None,
         output_transform_json: str | Path | None = None,
     ) -> PipelineResult:
-        sample = normalize_samples(
-            source=None,
-            rgb=rgb,
-            depth=depth,
-            intrinsics=intrinsics,
-            target=target,
-        )[0]
+        try:
+            sample = normalize_samples(
+                source=None,
+                rgb=rgb,
+                depth=depth,
+                intrinsics=intrinsics,
+                target=target,
+            )[0]
+        except Exception as exc:
+            if strict:
+                raise
+            result = self._failed_result(exc, target=target)
+            self._publish_outputs(result, output_json, output_transform_json)
+            return result
         result = self._run_sample(sample, strict=strict, visualize_3d=visualize_3d)
         self._publish_outputs(result, output_json, output_transform_json)
         return result
@@ -68,17 +75,62 @@ class RGBDGrasp:
         strict: bool = False,
         visualize_3d: bool | None = None,
     ) -> list[PipelineResult]:
-        samples = normalize_samples(
-            source,
-            rgb=rgb,
-            depth=depth,
-            intrinsics=intrinsics,
-            target=target,
-        )
+        try:
+            samples = normalize_samples(
+                source,
+                rgb=rgb,
+                depth=depth,
+                intrinsics=intrinsics,
+                target=target,
+            )
+        except Exception as exc:
+            if strict:
+                raise
+            has_keyword_input = any(
+                value is not None for value in (rgb, depth, intrinsics, target)
+            )
+            if isinstance(source, list) and not has_keyword_input:
+                return self._run_source_list_items(
+                    source,
+                    strict=strict,
+                    visualize_3d=visualize_3d,
+                )
+            source_target, source_id = _source_metadata(source)
+            return [
+                self._failed_result(
+                    exc,
+                    target=target if has_keyword_input else source_target,
+                    sample_id=source_id,
+                )
+            ]
         return [
             self._run_sample(sample, strict=strict, visualize_3d=visualize_3d)
             for sample in samples
         ]
+
+    def _run_source_list_items(
+        self,
+        source: list[Any],
+        *,
+        strict: bool,
+        visualize_3d: bool | None,
+    ) -> list[PipelineResult]:
+        results = []
+        for item in source:
+            try:
+                sample = normalize_samples(item)[0]
+            except Exception as exc:
+                if strict:
+                    raise
+                source_target, source_id = _source_metadata(item)
+                results.append(
+                    self._failed_result(exc, target=source_target, sample_id=source_id)
+                )
+                continue
+            results.append(
+                self._run_sample(sample, strict=strict, visualize_3d=visualize_3d)
+            )
+        return results
 
     def _run_sample(
         self,
@@ -102,15 +154,24 @@ class RGBDGrasp:
         except Exception as exc:
             if strict:
                 raise
-            return PipelineResult(
-                status=PipelineStatus.FAILED,
-                error=PipelineError(
-                    code=_exception_code(exc),
-                    message=str(exc),
-                    detail={"exception_type": type(exc).__name__},
-                ),
-                metadata={"target": sample.target, "sample_id": sample.id},
-            )
+            return self._failed_result(exc, target=sample.target, sample_id=sample.id)
+
+    def _failed_result(
+        self,
+        exc: Exception,
+        *,
+        target: str | None,
+        sample_id: str | None = None,
+    ) -> PipelineResult:
+        return PipelineResult(
+            status=PipelineStatus.FAILED,
+            error=PipelineError(
+                code=_exception_code(exc),
+                message=str(exc),
+                detail={"exception_type": type(exc).__name__},
+            ),
+            metadata={"target": target, "sample_id": sample_id},
+        )
 
     def _load_rgb(self, value: Any) -> np.ndarray:
         if isinstance(value, np.ndarray):
@@ -168,3 +229,14 @@ def _exception_code(exc: Exception) -> str:
             snake.append("_")
         snake.append(char.lower())
     return "".join(snake)
+
+
+def _source_metadata(source: Any) -> tuple[str | None, str | None]:
+    if not isinstance(source, dict):
+        return None, None
+    target = source.get("target")
+    sample_id = source.get("id")
+    return (
+        target if isinstance(target, str) else None,
+        sample_id if isinstance(sample_id, str) else None,
+    )

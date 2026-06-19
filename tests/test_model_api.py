@@ -157,6 +157,22 @@ def test_strict_false_converts_exceptions_to_failed_result():
     assert "boom" in result.error.message
 
 
+def test_strict_false_converts_input_validation_to_failed_result():
+    model, _ = _model_with_fake_pipeline()
+
+    result = model.predict_one(
+        rgb=np.zeros((2, 2, 3), dtype=np.uint8),
+        depth=np.ones((2, 2), dtype=np.uint16),
+        intrinsics=CameraIntrinsics(fx=1.0, fy=1.0, cx=1.0, cy=1.0),
+        target="",
+        strict=False,
+    )
+
+    assert result.status is PipelineStatus.FAILED
+    assert result.error is not None
+    assert result.error.code == "input_validation_error"
+
+
 def test_predict_requires_target():
     model, _ = _model_with_fake_pipeline()
 
