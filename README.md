@@ -11,7 +11,7 @@
 - 可替换抓取预测后端：RegionNormalizedGrasp 适配入口。
 - mask-aware 抓取排序：`center_in_mask`、`mask_overlap_ratio`、`target_score`、`final_score`。
 - 本地结果输出：
-  - 完整 pipeline JSON
+  - pipeline 结果摘要 JSON
   - 抓取 TF JSON
 - 3D 可视化开关：目标 mask 区域在原始点云颜色上叠加青绿色蒙版，全部候选夹爪与最终夹爪使用不同颜色。
 - GraspNet-1Billion 演示数据整理工具。
