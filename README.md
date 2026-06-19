@@ -101,7 +101,7 @@ python examples/run_image_pair.py \
 
 输出：
 
-- `outputs/result.json`: 完整 pipeline 结果。
+- `outputs/result.json`: pipeline 结果摘要 JSON。
 - `outputs/grasp_tf.json`: 外部系统可消费的本地 TF message。
 
 ## Python API
@@ -121,7 +121,7 @@ print(result.status.value)
 print(result.best_grasp)
 ```
 
-For batch experiments, pass an explicit sample list or manifest to `predict()`, `val()`, or `benchmark()`.
+For batch experiments, pass explicit sample lists to `predict()`. `val()` and `benchmark()` accept explicit sample lists or manifest files.
 
 ## Real GPU Smoke
 
