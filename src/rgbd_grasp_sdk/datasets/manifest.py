@@ -11,15 +11,12 @@ from rgbd_grasp_sdk.errors import InputValidationError
 from rgbd_grasp_sdk.types import CameraIntrinsics
 
 
-SampleValue = str | Path | Any
-
-
 @dataclass(frozen=True)
 class GraspSample:
     id: str | None
-    rgb: SampleValue
-    depth: SampleValue
-    intrinsics: CameraIntrinsics | str | Path
+    rgb: Any
+    depth: Any
+    intrinsics: Any
     target: str
 
 

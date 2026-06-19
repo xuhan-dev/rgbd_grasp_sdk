@@ -5,7 +5,7 @@ import json
 import numpy as np
 import pytest
 
-from rgbd_grasp_sdk.datasets import GraspSample, load_samples, normalize_samples
+from rgbd_grasp_sdk.datasets import load_samples, normalize_samples
 from rgbd_grasp_sdk.errors import InputValidationError
 from rgbd_grasp_sdk.types import CameraIntrinsics
 
@@ -23,15 +23,12 @@ def test_normalize_single_keyword_sample_preserves_arrays():
         target="apple",
     )
 
-    assert samples == [
-        GraspSample(
-            id=None,
-            rgb=rgb,
-            depth=depth,
-            intrinsics=intrinsics,
-            target="apple",
-        )
-    ]
+    sample = samples[0]
+    assert sample.id is None
+    assert sample.rgb is rgb
+    assert sample.depth is depth
+    assert sample.intrinsics is intrinsics
+    assert sample.target == "apple"
 
 
 def test_normalize_source_list_keeps_sample_ids():
