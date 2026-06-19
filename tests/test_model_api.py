@@ -279,3 +279,66 @@ def test_predict_requires_target():
             intrinsics=CameraIntrinsics(fx=1.0, fy=1.0, cx=1.0, cy=1.0),
             target="",
         )
+
+
+def test_info_reports_config_backends_and_dependency_status():
+    model, _ = _model_with_fake_pipeline()
+
+    info = model.info()
+
+    assert info["segmentation"]["backend"] == "mock_seg"
+    assert info["grasping"]["backend"] == "mock_grasp"
+    assert info["ranking"]["backend"] == "default"
+    assert info["devices"] == {"segmentation": "cpu", "grasping": "cpu"}
+    assert "dependencies" in info
+    assert info["paths"]["segmentation.model_path"]["exists"] is False
+    assert info["paths"]["grasping.checkpoint_path"]["exists"] is False
+
+
+def test_val_uses_manifest_samples_and_validation_summary():
+    model, _ = _model_with_fake_pipeline()
+    intrinsics = CameraIntrinsics(fx=1.0, fy=1.0, cx=1.0, cy=1.0)
+
+    summary = model.val(
+        data=[
+            {
+                "rgb": np.zeros((2, 2, 3), dtype=np.uint8),
+                "depth": np.ones((2, 2), dtype=np.uint16),
+                "intrinsics": intrinsics,
+                "target": "apple",
+            },
+            {
+                "rgb": np.zeros((2, 2, 3), dtype=np.uint8),
+                "depth": np.ones((2, 2), dtype=np.uint16),
+                "intrinsics": intrinsics,
+                "target": "fail",
+            },
+        ]
+    )
+
+    assert summary["total"] == 2
+    assert summary["success"] == 1
+    assert summary["failed"] == 1
+
+
+def test_benchmark_runs_warmup_and_repeat_without_counting_warmup():
+    model, fake = _model_with_fake_pipeline()
+    intrinsics = CameraIntrinsics(fx=1.0, fy=1.0, cx=1.0, cy=1.0)
+    data = [
+        {
+            "rgb": np.zeros((2, 2, 3), dtype=np.uint8),
+            "depth": np.ones((2, 2), dtype=np.uint16),
+            "intrinsics": intrinsics,
+            "target": "apple",
+        }
+    ]
+
+    summary = model.benchmark(data=data, warmup=2, repeat=3)
+
+    assert summary["warmup"] == 2
+    assert summary["repeat"] == 3
+    assert summary["total"] == 3
+    assert summary["success"] == 3
+    assert len(fake.calls) == 5
+    assert summary["backend"]["segmentation"] == "mock_seg"
+    assert summary["backend"]["grasping"] == "mock_grasp"

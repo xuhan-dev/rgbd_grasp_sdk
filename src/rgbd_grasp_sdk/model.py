@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+import importlib.metadata
+import importlib.util
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
+from rgbd_grasp_sdk.benchmarking import BenchmarkRecord, summarize_benchmark
 from rgbd_grasp_sdk.config.loader import load_config
 from rgbd_grasp_sdk.config.schema import SdkConfig
-from rgbd_grasp_sdk.datasets import GraspSample, normalize_samples
+from rgbd_grasp_sdk.datasets import GraspSample, load_samples, normalize_samples
 from rgbd_grasp_sdk.errors import InputValidationError
+from rgbd_grasp_sdk.evaluation import summarize_validation
 from rgbd_grasp_sdk.grasping.factory import create_grasp_predictor
 from rgbd_grasp_sdk.io import read_depth, read_intrinsics_npz, read_rgb
 from rgbd_grasp_sdk.pipeline.grasp_pipeline import GraspPipeline
@@ -34,6 +39,74 @@ class RGBDGrasp:
         self._pipeline_builder = pipeline_builder or self._default_pipeline_builder
         self._pipeline = self._pipeline_builder(self.config, None)
         self._pipeline_cache: dict[bool | None, Any] = {None: self._pipeline}
+
+    def info(self) -> dict[str, Any]:
+        return {
+            "version": _package_version(),
+            "segmentation": {
+                "backend": self.config.segmentation.backend,
+                "options": dict(self.config.segmentation.options),
+            },
+            "grasping": {
+                "backend": self.config.grasping.backend,
+                "options": dict(self.config.grasping.options),
+            },
+            "ranking": {
+                "backend": self.config.ranking.backend,
+                "top_k": self.config.ranking.top_k,
+            },
+            "devices": {
+                "segmentation": self.config.segmentation.options.get("device"),
+                "grasping": self.config.grasping.options.get("device"),
+            },
+            "dependencies": {
+                "cv2": importlib.util.find_spec("cv2") is not None,
+                "numpy": importlib.util.find_spec("numpy") is not None,
+                "ultralytics": importlib.util.find_spec("ultralytics") is not None,
+                "torch": importlib.util.find_spec("torch") is not None,
+                "open3d": importlib.util.find_spec("open3d") is not None,
+            },
+            "paths": self._path_status(),
+        }
+
+    def val(self, data: Any) -> dict[str, Any]:
+        samples = self._load_data_samples(data)
+        results = [
+            self._run_sample(sample, strict=False, visualize_3d=None)
+            for sample in samples
+        ]
+        return summarize_validation(results)
+
+    def benchmark(
+        self,
+        data: Any,
+        *,
+        warmup: int = 1,
+        repeat: int = 3,
+    ) -> dict[str, Any]:
+        samples = self._load_data_samples(data)
+        for _ in range(warmup):
+            for sample in samples:
+                self._run_sample(sample, strict=False, visualize_3d=None)
+
+        records: list[BenchmarkRecord] = []
+        for _ in range(repeat):
+            for sample in samples:
+                started = time.perf_counter()
+                result = self._run_sample(sample, strict=False, visualize_3d=None)
+                records.append(
+                    BenchmarkRecord(
+                        result=result,
+                        elapsed=time.perf_counter() - started,
+                    )
+                )
+
+        return summarize_benchmark(
+            records,
+            warmup=warmup,
+            repeat=repeat,
+            backend_summary=self._backend_summary(),
+        )
 
     def predict_one(
         self,
@@ -222,6 +295,39 @@ class RGBDGrasp:
         if output_transform_json is not None:
             TransformJsonFilePublisher(output_transform_json).publish(result)
 
+    def _load_data_samples(self, data: Any) -> list[GraspSample]:
+        if isinstance(data, (str, Path)):
+            return load_samples(data)
+        return normalize_samples(data)
+
+    def _backend_summary(self) -> dict[str, Any]:
+        return {
+            "segmentation": self.config.segmentation.backend,
+            "grasping": self.config.grasping.backend,
+            "ranking": self.config.ranking.backend,
+            "devices": {
+                "segmentation": self.config.segmentation.options.get("device"),
+                "grasping": self.config.grasping.options.get("device"),
+            },
+        }
+
+    def _path_status(self) -> dict[str, dict[str, Any]]:
+        paths: dict[str, dict[str, Any]] = {}
+        for section_name, options in (
+            ("segmentation", self.config.segmentation.options),
+            ("grasping", self.config.grasping.options),
+        ):
+            for key in ("model_path", "checkpoint_path"):
+                value = options.get(key)
+                if value is None:
+                    continue
+                path = Path(value)
+                paths[f"{section_name}.{key}"] = {
+                    "path": str(path),
+                    "exists": path.exists(),
+                }
+        return paths
+
     def _default_pipeline_builder(
         self,
         config: SdkConfig,
@@ -257,3 +363,10 @@ def _source_metadata(source: Any) -> tuple[str | None, str | None]:
         target if isinstance(target, str) else None,
         sample_id if isinstance(sample_id, str) else None,
     )
+
+
+def _package_version() -> str:
+    try:
+        return importlib.metadata.version("rgbd-grasp-sdk")
+    except importlib.metadata.PackageNotFoundError:
+        return "0.1.0"
