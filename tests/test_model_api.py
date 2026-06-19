@@ -127,6 +127,73 @@ def test_predict_processes_source_list_independently():
     assert len(fake.calls) == 2
 
 
+def test_predict_caches_visualize_override_pipeline_for_batch():
+    builder_calls = []
+    pipelines = []
+
+    def build_pipeline(config, visualize_3d=None):
+        builder_calls.append(visualize_3d)
+        pipeline = FakePipeline()
+        pipelines.append(pipeline)
+        return pipeline
+
+    model = RGBDGrasp(_config(), pipeline_builder=build_pipeline)
+    intrinsics = CameraIntrinsics(fx=1.0, fy=1.0, cx=1.0, cy=1.0)
+    source = [
+        {
+            "id": "a",
+            "rgb": np.zeros((2, 2, 3), dtype=np.uint8),
+            "depth": np.ones((2, 2), dtype=np.uint16),
+            "intrinsics": intrinsics,
+            "target": "apple",
+        },
+        {
+            "id": "b",
+            "rgb": np.zeros((2, 2, 3), dtype=np.uint8),
+            "depth": np.ones((2, 2), dtype=np.uint16),
+            "intrinsics": intrinsics,
+            "target": "pear",
+        },
+    ]
+
+    results = model.predict(source=source, visualize_3d=True)
+
+    assert [item.status for item in results] == [
+        PipelineStatus.SUCCESS,
+        PipelineStatus.SUCCESS,
+    ]
+    assert builder_calls == [None, True]
+    assert len(pipelines[1].calls) == 2
+
+
+def test_predict_attaches_sample_metadata_to_pipeline_results():
+    model, _ = _model_with_fake_pipeline()
+    intrinsics = CameraIntrinsics(fx=1.0, fy=1.0, cx=1.0, cy=1.0)
+    source = [
+        {
+            "id": "a",
+            "rgb": np.zeros((2, 2, 3), dtype=np.uint8),
+            "depth": np.ones((2, 2), dtype=np.uint16),
+            "intrinsics": intrinsics,
+            "target": "apple",
+        },
+        {
+            "id": "b",
+            "rgb": np.zeros((2, 2, 3), dtype=np.uint8),
+            "depth": np.ones((2, 2), dtype=np.uint16),
+            "intrinsics": intrinsics,
+            "target": "fail",
+        },
+    ]
+
+    results = model.predict(source=source)
+
+    assert results[0].metadata["sample_id"] == "a"
+    assert results[0].metadata["target"] == "apple"
+    assert results[1].metadata["sample_id"] == "b"
+    assert results[1].metadata["target"] == "fail"
+
+
 def test_strict_true_reraises_exceptions():
     model, _ = _model_with_fake_pipeline()
 

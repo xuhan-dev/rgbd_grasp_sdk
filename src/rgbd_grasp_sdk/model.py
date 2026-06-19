@@ -33,6 +33,7 @@ class RGBDGrasp:
         self.config = load_config(config) if isinstance(config, (str, Path)) else config
         self._pipeline_builder = pipeline_builder or self._default_pipeline_builder
         self._pipeline = self._pipeline_builder(self.config, None)
+        self._pipeline_cache: dict[bool | None, Any] = {None: self._pipeline}
 
     def predict_one(
         self,
@@ -142,19 +143,35 @@ class RGBDGrasp:
         try:
             if not sample.target:
                 raise InputValidationError("target 必须是非空字符串")
-            pipeline = self._pipeline
-            if visualize_3d is not None:
-                pipeline = self._pipeline_builder(self.config, visualize_3d)
-            return pipeline.run(
+            pipeline = self._get_pipeline(visualize_3d)
+            result = pipeline.run(
                 rgb=self._load_rgb(sample.rgb),
                 depth=self._load_depth(sample.depth),
                 intrinsics=self._load_intrinsics(sample.intrinsics),
                 target=sample.target,
             )
+            self._attach_sample_metadata(result, sample)
+            return result
         except Exception as exc:
             if strict:
                 raise
             return self._failed_result(exc, target=sample.target, sample_id=sample.id)
+
+    def _get_pipeline(self, visualize_3d: bool | None) -> Any:
+        if visualize_3d not in self._pipeline_cache:
+            self._pipeline_cache[visualize_3d] = self._pipeline_builder(
+                self.config,
+                visualize_3d,
+            )
+        return self._pipeline_cache[visualize_3d]
+
+    def _attach_sample_metadata(
+        self,
+        result: PipelineResult,
+        sample: GraspSample,
+    ) -> None:
+        result.metadata.setdefault("target", sample.target)
+        result.metadata.setdefault("sample_id", sample.id)
 
     def _failed_result(
         self,
