@@ -317,7 +317,7 @@ class RGBDGrasp:
             ("segmentation", self.config.segmentation.options),
             ("grasping", self.config.grasping.options),
         ):
-            for key in ("model_path", "checkpoint_path"):
+            for key in ("model_path", "checkpoint_path", "checkpoint"):
                 value = options.get(key)
                 if value is None:
                     continue

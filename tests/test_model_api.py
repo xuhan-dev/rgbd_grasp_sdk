@@ -295,6 +295,31 @@ def test_info_reports_config_backends_and_dependency_status():
     assert info["paths"]["grasping.checkpoint_path"]["exists"] is False
 
 
+def test_info_reports_grasping_checkpoint_path_status():
+    config = SdkConfig(
+        segmentation=SegmentationConfig(
+            backend="mock_seg",
+            options={"model_path": "seg.pt", "device": "cpu"},
+        ),
+        grasping=GraspingConfig(
+            backend="mock_grasp",
+            options={"checkpoint": "rng.ckpt", "device": "cpu"},
+        ),
+        mask=MaskConfig(),
+        ranking=RankingConfig(backend="default"),
+        outputs=OutputConfig(visualize_3d=False),
+    )
+    fake = FakePipeline()
+    model = RGBDGrasp(
+        config,
+        pipeline_builder=lambda config, visualize_3d=None: fake,
+    )
+
+    info = model.info()
+
+    assert info["paths"]["grasping.checkpoint"]["exists"] is False
+
+
 def test_val_uses_manifest_samples_and_validation_summary():
     model, _ = _model_with_fake_pipeline()
     intrinsics = CameraIntrinsics(fx=1.0, fy=1.0, cx=1.0, cy=1.0)
