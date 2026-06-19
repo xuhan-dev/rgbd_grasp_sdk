@@ -19,6 +19,10 @@ RGB-D 输入
   -> PipelineResult
 ```
 
+## Python API Layer
+
+`RGBDGrasp` 是推荐的 Python 顶层入口。它负责加载配置、创建 adapter、标准化输入、调用 `GraspPipeline`，并提供 `predict_one()`、`predict()`、`info()`、`val()` 和 `benchmark()`。底层 `pipeline` 仍只依赖抽象接口，真实模型接入仍必须放在 adapter 内。
+
 ## 后续模型接入方式
 
 新增分割模型：

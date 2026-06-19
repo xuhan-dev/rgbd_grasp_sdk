@@ -104,6 +104,25 @@ python examples/run_image_pair.py \
 - `outputs/result.json`: 完整 pipeline 结果。
 - `outputs/grasp_tf.json`: 外部系统可消费的本地 TF message。
 
+## Python API
+
+```python
+from rgbd_grasp_sdk import RGBDGrasp
+
+model = RGBDGrasp("configs/yolo_rng.yaml")
+result = model.predict_one(
+    rgb="data/rgb.png",
+    depth="data/depth.png",
+    intrinsics="data/camera_intrinsics.npz",
+    target="apple",
+)
+
+print(result.status.value)
+print(result.best_grasp)
+```
+
+For batch experiments, pass an explicit sample list or manifest to `predict()`, `val()`, or `benchmark()`.
+
 ## Real GPU Smoke
 
 真实依赖、真实权重和 GPU 环境准备好后运行：
