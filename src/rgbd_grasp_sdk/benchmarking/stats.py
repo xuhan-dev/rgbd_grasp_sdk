@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from math import fsum
 from typing import Any
@@ -15,11 +16,11 @@ class BenchmarkRecord:
 
 
 def summarize_benchmark(
-    records: list[BenchmarkRecord],
+    records: Sequence[BenchmarkRecord],
     *,
     warmup: int,
     repeat: int,
-    backend_summary: dict[str, Any],
+    backend_summary: Mapping[str, Any],
 ) -> dict[str, Any]:
     total = len(records)
     success = sum(1 for record in records if record.result.status is PipelineStatus.SUCCESS)
@@ -42,7 +43,7 @@ def summarize_benchmark(
     }
 
 
-def _failure_reasons(records: list[BenchmarkRecord]) -> dict[str, int]:
+def _failure_reasons(records: Sequence[BenchmarkRecord]) -> dict[str, int]:
     counter: Counter[str] = Counter()
     for record in records:
         if record.result.status is PipelineStatus.SUCCESS:
@@ -54,7 +55,7 @@ def _failure_reasons(records: list[BenchmarkRecord]) -> dict[str, int]:
     return dict(counter)
 
 
-def _timing_distributions(records: list[BenchmarkRecord]) -> dict[str, dict[str, float]]:
+def _timing_distributions(records: Sequence[BenchmarkRecord]) -> dict[str, dict[str, float]]:
     buckets: dict[str, list[float]] = defaultdict(list)
     for record in records:
         for key, value in record.result.timings.items():
@@ -68,13 +69,14 @@ def _distribution(values: list[float]) -> dict[str, float]:
     ordered = sorted(values)
     return {
         "mean": fsum(ordered) / len(ordered),
-        "p50": _nearest_rank(ordered, 0.50),
-        "p95": _nearest_rank(ordered, 0.95),
+        "p50": _rounded_quantile(ordered, 0.50),
+        "p95": _rounded_quantile(ordered, 0.95),
         "max": ordered[-1],
     }
 
 
-def _nearest_rank(ordered: list[float], percentile: float) -> float:
+def _rounded_quantile(ordered: list[float], percentile: float) -> float:
+    """Pick the value at the rounded percentile index from sorted values."""
     if len(ordered) == 1:
         return ordered[0]
     index = round((len(ordered) - 1) * percentile)

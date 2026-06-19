@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from rgbd_grasp_sdk.benchmarking import BenchmarkRecord, summarize_benchmark
 from rgbd_grasp_sdk.types import PipelineError, PipelineResult, PipelineStatus
 
@@ -35,13 +37,13 @@ def test_summarize_benchmark_reports_percentiles_throughput_and_failures():
     assert summary["success"] == 2
     assert summary["failed"] == 1
     assert summary["failure_reasons"] == {"empty_mask": 1}
-    assert summary["elapsed"]["mean"] == 0.21
+    assert summary["elapsed"]["mean"] == pytest.approx(0.21)
     assert summary["elapsed"]["p50"] == 0.21
     assert summary["elapsed"]["p95"] == 0.31
     assert summary["elapsed"]["max"] == 0.31
-    assert summary["timings"]["total"]["mean"] == 0.19999999999999998
-    assert summary["timings"]["grasping"]["mean"] == 0.095
-    assert summary["samples_per_sec"] == 1 / 0.21
+    assert summary["timings"]["total"]["mean"] == pytest.approx(0.2)
+    assert summary["timings"]["grasping"]["mean"] == pytest.approx(0.095)
+    assert summary["samples_per_sec"] == pytest.approx(1 / 0.21)
     assert summary["backend"] == {"segmentation": "yolo", "grasping": "rng"}
 
 
@@ -49,5 +51,8 @@ def test_summarize_benchmark_handles_no_records():
     summary = summarize_benchmark([], warmup=0, repeat=1, backend_summary={})
 
     assert summary["total"] == 0
-    assert summary["elapsed"] == {"mean": 0.0, "p50": 0.0, "p95": 0.0, "max": 0.0}
-    assert summary["samples_per_sec"] == 0.0
+    assert summary["elapsed"]["mean"] == pytest.approx(0.0)
+    assert summary["elapsed"]["p50"] == 0.0
+    assert summary["elapsed"]["p95"] == 0.0
+    assert summary["elapsed"]["max"] == 0.0
+    assert summary["samples_per_sec"] == pytest.approx(0.0)
