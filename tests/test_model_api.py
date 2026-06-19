@@ -194,6 +194,35 @@ def test_predict_attaches_sample_metadata_to_pipeline_results():
     assert results[1].metadata["target"] == "fail"
 
 
+def test_predict_preserves_existing_pipeline_metadata():
+    class MetadataPipeline:
+        def run(self, rgb, depth, intrinsics, target):
+            return PipelineResult(
+                status=PipelineStatus.SUCCESS,
+                metadata={
+                    "source": "pipeline",
+                    "target": "pipeline-target",
+                    "sample_id": "pipeline-id",
+                },
+            )
+
+    model = RGBDGrasp(
+        _config(),
+        pipeline_builder=lambda config, visualize_3d=None: MetadataPipeline(),
+    )
+
+    result = model.predict_one(
+        rgb=np.zeros((2, 2, 3), dtype=np.uint8),
+        depth=np.ones((2, 2), dtype=np.uint16),
+        intrinsics=CameraIntrinsics(fx=1.0, fy=1.0, cx=1.0, cy=1.0),
+        target="apple",
+    )
+
+    assert result.metadata["source"] == "pipeline"
+    assert result.metadata["target"] == "pipeline-target"
+    assert result.metadata["sample_id"] == "pipeline-id"
+
+
 def test_strict_true_reraises_exceptions():
     model, _ = _model_with_fake_pipeline()
 
