@@ -21,6 +21,11 @@ class GraspSample:
 
 
 def load_samples(path: str | Path) -> list[GraspSample]:
+    raw, base_dir = load_sample_items(path)
+    return normalize_samples(raw, base_dir=base_dir)
+
+
+def load_sample_items(path: str | Path) -> tuple[list[Any], Path]:
     manifest_path = Path(path)
     if not manifest_path.exists():
         raise InputValidationError(f"manifest 文件不存在: {manifest_path}")
@@ -34,7 +39,7 @@ def load_samples(path: str | Path) -> list[GraspSample]:
     if not isinstance(raw, list):
         raise InputValidationError("manifest 根节点必须是样本列表")
 
-    return normalize_samples(raw, base_dir=manifest_path.parent)
+    return raw, manifest_path.parent
 
 
 def normalize_samples(

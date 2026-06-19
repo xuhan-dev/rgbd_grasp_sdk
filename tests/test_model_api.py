@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+
+import cv2
 import numpy as np
 import pytest
 
@@ -65,6 +68,22 @@ def _model_with_fake_pipeline():
     fake = FakePipeline()
     model = RGBDGrasp(_config(), pipeline_builder=lambda config, visualize_3d=None: fake)
     return model, fake
+
+
+def _write_sample_files(tmp_path):
+    cv2.imwrite(str(tmp_path / "rgb.png"), np.zeros((2, 2, 3), dtype=np.uint8))
+    cv2.imwrite(str(tmp_path / "depth.png"), np.ones((2, 2), dtype=np.uint16))
+    np.savez(
+        tmp_path / "K.npz",
+        K=np.array(
+            [
+                [1.0, 0.0, 1.0],
+                [0.0, 1.0, 1.0],
+                [0.0, 0.0, 1.0],
+            ],
+            dtype=np.float32,
+        ),
+    )
 
 
 def test_rgbd_grasp_is_exported_from_package():
@@ -162,8 +181,30 @@ def test_predict_caches_visualize_override_pipeline_for_batch():
         PipelineStatus.SUCCESS,
         PipelineStatus.SUCCESS,
     ]
-    assert builder_calls == [None, True]
-    assert len(pipelines[1].calls) == 2
+    assert builder_calls == [True]
+    assert len(pipelines[0].calls) == 2
+
+
+def test_predict_builds_default_pipeline_once_on_first_use():
+    builder_calls = []
+
+    def build_pipeline(config, visualize_3d=None):
+        builder_calls.append(visualize_3d)
+        return FakePipeline()
+
+    model = RGBDGrasp(_config(), pipeline_builder=build_pipeline)
+    intrinsics = CameraIntrinsics(fx=1.0, fy=1.0, cx=1.0, cy=1.0)
+    sample = {
+        "rgb": np.zeros((2, 2, 3), dtype=np.uint8),
+        "depth": np.ones((2, 2), dtype=np.uint16),
+        "intrinsics": intrinsics,
+        "target": "apple",
+    }
+
+    model.predict(source=[sample])
+    model.predict(source=[sample])
+
+    assert builder_calls == [None]
 
 
 def test_predict_attaches_sample_metadata_to_pipeline_results():
@@ -315,6 +356,22 @@ def test_info_reports_config_backends_and_dependency_status(tmp_path):
     assert info["paths"]["grasping.checkpoint_path"]["exists"] is False
 
 
+def test_info_does_not_build_pipeline():
+    builder_called = False
+
+    def raising_builder(config, visualize_3d=None):
+        nonlocal builder_called
+        builder_called = True
+        raise RuntimeError("pipeline should not be built")
+
+    model = RGBDGrasp(_config(), pipeline_builder=raising_builder)
+
+    info = model.info()
+
+    assert info["segmentation"]["backend"] == "mock_seg"
+    assert builder_called is False
+
+
 def test_info_reports_grasping_checkpoint_path_status(tmp_path):
     config = SdkConfig(
         segmentation=SegmentationConfig(
@@ -363,6 +420,39 @@ def test_val_converts_malformed_list_items_to_failed_results():
     assert summary["total"] == 2
     assert summary["success"] == 1
     assert summary["failed"] == 1
+
+
+def test_val_converts_malformed_manifest_items_to_failed_results(tmp_path):
+    model, fake = _model_with_fake_pipeline()
+    _write_sample_files(tmp_path)
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(
+        json.dumps(
+            [
+                {
+                    "id": "valid",
+                    "rgb": "rgb.png",
+                    "depth": "depth.png",
+                    "intrinsics": "K.npz",
+                    "target": "apple",
+                },
+                {
+                    "id": "missing-depth",
+                    "rgb": "rgb.png",
+                    "intrinsics": "K.npz",
+                    "target": "pear",
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    summary = model.val(data=manifest)
+
+    assert summary["total"] == 2
+    assert summary["success"] == 1
+    assert summary["failed"] == 1
+    assert fake.calls[0][3] == "apple"
 
 
 def test_val_uses_manifest_samples_and_validation_summary():
@@ -418,6 +508,33 @@ def test_benchmark_converts_malformed_list_items_to_failed_records():
     assert summary["failed"] == 1
 
 
+def test_benchmark_converts_malformed_manifest_items_to_failed_records(tmp_path):
+    model, fake = _model_with_fake_pipeline()
+    _write_sample_files(tmp_path)
+    manifest = tmp_path / "manifest.yaml"
+    manifest.write_text(
+        """
+- id: valid
+  rgb: rgb.png
+  depth: depth.png
+  intrinsics: K.npz
+  target: apple
+- id: missing-depth
+  rgb: rgb.png
+  intrinsics: K.npz
+  target: pear
+""",
+        encoding="utf-8",
+    )
+
+    summary = model.benchmark(data=manifest, warmup=0, repeat=1)
+
+    assert summary["total"] == 2
+    assert summary["success"] == 1
+    assert summary["failed"] == 1
+    assert fake.calls[0][3] == "apple"
+
+
 def test_benchmark_runs_warmup_and_repeat_without_counting_warmup():
     model, fake = _model_with_fake_pipeline()
     intrinsics = CameraIntrinsics(fx=1.0, fy=1.0, cx=1.0, cy=1.0)
@@ -447,6 +564,11 @@ def test_benchmark_runs_warmup_and_repeat_without_counting_warmup():
         (-1, 1),
         (0, 0),
         (0, -1),
+        (0.5, 1),
+        (0, 1.2),
+        ("0", 1),
+        (False, 1),
+        (0, True),
     ],
 )
 def test_benchmark_rejects_invalid_warmup_and_repeat(warmup, repeat):

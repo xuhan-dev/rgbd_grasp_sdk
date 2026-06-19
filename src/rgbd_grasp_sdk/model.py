@@ -12,7 +12,12 @@ import numpy as np
 from rgbd_grasp_sdk.benchmarking import BenchmarkRecord, summarize_benchmark
 from rgbd_grasp_sdk.config.loader import load_config
 from rgbd_grasp_sdk.config.schema import SdkConfig
-from rgbd_grasp_sdk.datasets import GraspSample, load_samples, normalize_samples
+from rgbd_grasp_sdk.datasets import (
+    GraspSample,
+    load_sample_items,
+    load_samples,
+    normalize_samples,
+)
 from rgbd_grasp_sdk.errors import InputValidationError
 from rgbd_grasp_sdk.evaluation import summarize_validation
 from rgbd_grasp_sdk.grasping.factory import create_grasp_predictor
@@ -37,8 +42,7 @@ class RGBDGrasp:
         self.config_path = Path(config) if isinstance(config, (str, Path)) else None
         self.config = load_config(config) if isinstance(config, (str, Path)) else config
         self._pipeline_builder = pipeline_builder or self._default_pipeline_builder
-        self._pipeline = self._pipeline_builder(self.config, None)
-        self._pipeline_cache: dict[bool | None, Any] = {None: self._pipeline}
+        self._pipeline_cache: dict[bool | None, Any] = {}
 
     def info(self) -> dict[str, Any]:
         return {
@@ -293,9 +297,15 @@ class RGBDGrasp:
         *,
         visualize_3d: bool | None,
     ) -> list[PipelineResult]:
+        if isinstance(data, (str, Path)):
+            items, base_dir = load_sample_items(data)
+            return [
+                self._run_data_item(item, visualize_3d=visualize_3d, base_dir=base_dir)
+                for item in items
+            ]
         if isinstance(data, list):
             return [
-                self._run_data_item(item, visualize_3d=visualize_3d)
+                self._run_data_item(item, visualize_3d=visualize_3d, base_dir=None)
                 for item in data
             ]
         return [
@@ -308,9 +318,10 @@ class RGBDGrasp:
         item: Any,
         *,
         visualize_3d: bool | None,
+        base_dir: str | Path | None = None,
     ) -> PipelineResult:
         try:
-            sample = normalize_samples(item)[0]
+            sample = normalize_samples(item, base_dir=base_dir)[0]
         except Exception as exc:
             source_target, source_id = _source_metadata(item)
             return self._failed_result(exc, target=source_target, sample_id=source_id)
@@ -323,10 +334,31 @@ class RGBDGrasp:
         visualize_3d: bool | None,
     ) -> list[BenchmarkRecord]:
         records: list[BenchmarkRecord] = []
+        if isinstance(data, (str, Path)):
+            items, base_dir = load_sample_items(data)
+            for item in items:
+                started = time.perf_counter()
+                result = self._run_data_item(
+                    item,
+                    visualize_3d=visualize_3d,
+                    base_dir=base_dir,
+                )
+                records.append(
+                    BenchmarkRecord(
+                        result=result,
+                        elapsed=time.perf_counter() - started,
+                    )
+                )
+            return records
+
         if isinstance(data, list):
             for item in data:
                 started = time.perf_counter()
-                result = self._run_data_item(item, visualize_3d=visualize_3d)
+                result = self._run_data_item(
+                    item,
+                    visualize_3d=visualize_3d,
+                    base_dir=None,
+                )
                 records.append(
                     BenchmarkRecord(
                         result=result,
@@ -347,6 +379,10 @@ class RGBDGrasp:
         return records
 
     def _validate_benchmark_args(self, *, warmup: int, repeat: int) -> None:
+        if not isinstance(warmup, int) or isinstance(warmup, bool):
+            raise InputValidationError("warmup 必须是整数")
+        if not isinstance(repeat, int) or isinstance(repeat, bool):
+            raise InputValidationError("repeat 必须是整数")
         if warmup < 0:
             raise InputValidationError("warmup 必须大于等于 0")
         if repeat < 1:
