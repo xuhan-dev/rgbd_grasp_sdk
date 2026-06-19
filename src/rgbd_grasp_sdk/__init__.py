@@ -1,4 +1,5 @@
 from rgbd_grasp_sdk.config.loader import load_config
+from rgbd_grasp_sdk.model import RGBDGrasp
 from rgbd_grasp_sdk.pipeline.grasp_pipeline import GraspPipeline
 from rgbd_grasp_sdk.types import (
     CameraIntrinsics,
@@ -15,5 +16,6 @@ __all__ = [
     "PipelineResult",
     "PipelineStatus",
     "Pose6D",
+    "RGBDGrasp",
     "load_config",
 ]
