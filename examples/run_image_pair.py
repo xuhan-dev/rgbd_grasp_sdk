@@ -3,13 +3,8 @@ from __future__ import annotations
 import argparse
 from typing import Sequence
 
-from rgbd_grasp_sdk.config.loader import load_config
-from rgbd_grasp_sdk.grasping.factory import create_grasp_predictor
-from rgbd_grasp_sdk.io import read_depth, read_intrinsics_npz, read_rgb
-from rgbd_grasp_sdk.pipeline.grasp_pipeline import GraspPipeline
+from rgbd_grasp_sdk import RGBDGrasp
 from rgbd_grasp_sdk.publishers import JsonFilePublisher, TransformJsonFilePublisher
-from rgbd_grasp_sdk.ranking.factory import create_ranker
-from rgbd_grasp_sdk.segmentation.factory import create_segmenter
 from rgbd_grasp_sdk.types import PipelineResult
 
 
@@ -31,31 +26,22 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main() -> None:
-    args = parse_args()
-    config = load_config(args.config)
-    segmenter = create_segmenter(config.segmentation.backend, config.segmentation.options)
-    grasp_predictor = create_grasp_predictor(config.grasping.backend, config.grasping.options)
-    visualize_3d = (
-        config.outputs.visualize_3d
-        if args.visualize_3d is None
-        else bool(args.visualize_3d)
-    )
-    pipeline = GraspPipeline(
-        segmenter=segmenter,
-        grasp_predictor=grasp_predictor,
-        ranker=create_ranker(config.ranking),
-        mask_config=config.mask,
-        visualize_3d=visualize_3d,
-    )
-
-    result = pipeline.run(
-        rgb=read_rgb(args.rgb),
-        depth=read_depth(args.depth),
-        intrinsics=read_intrinsics_npz(args.intrinsics),
+def main(argv: Sequence[str] | None = None) -> None:
+    args = parse_args(argv)
+    model = RGBDGrasp(args.config)
+    result = model.predict_one(
+        rgb=args.rgb,
+        depth=args.depth,
+        intrinsics=args.intrinsics,
         target=args.target,
+        visualize_3d=args.visualize_3d,
+        output_json=args.output_json,
+        output_transform_json=args.output_transform_json,
     )
+    _print_result(result)
 
+
+def _print_result(result: PipelineResult) -> None:
     print(f"status: {result.status.value}")
     if result.best_grasp is not None:
         print(f"best_score: {result.best_grasp.score:.4f}")
@@ -64,8 +50,6 @@ def main() -> None:
     if result.error is not None:
         print(f"error: {result.error.code} - {result.error.message}")
     print(f"timings: {result.timings}")
-
-    _publish_outputs(result, args)
 
 
 def _publish_outputs(result: PipelineResult, args: argparse.Namespace) -> None:
