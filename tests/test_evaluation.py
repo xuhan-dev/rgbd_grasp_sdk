@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from rgbd_grasp_sdk.evaluation import summarize_validation
 from rgbd_grasp_sdk.types import (
     GraspCandidate,
@@ -47,9 +49,9 @@ def test_summarize_validation_counts_success_failure_and_reasons():
     assert summary["failure_reasons"] == {"empty_mask": 2}
     assert summary["candidate_count"] == {"mean": 2.0, "min": 2, "max": 2}
     assert summary["best_score"] == {"mean": 0.8, "min": 0.8, "max": 0.8}
-    assert summary["timings"]["total_mean"] == 0.3666666666666667
-    assert summary["timings"]["segmentation_mean"] == 0.15000000000000002
-    assert summary["timings"]["grasping_mean"] == 0.3
+    assert summary["timings"]["total_mean"] == pytest.approx(0.3666666666666667)
+    assert summary["timings"]["segmentation_mean"] == pytest.approx(0.15000000000000002)
+    assert summary["timings"]["grasping_mean"] == pytest.approx(0.3)
 
 
 def test_summarize_validation_handles_empty_results():
