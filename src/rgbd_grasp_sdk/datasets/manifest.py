@@ -34,6 +34,9 @@ def load_samples(path: str | Path) -> list[GraspSample]:
     else:
         raw = yaml.safe_load(text)
 
+    if not isinstance(raw, list):
+        raise InputValidationError("manifest 根节点必须是样本列表")
+
     return normalize_samples(raw, base_dir=manifest_path.parent)
 
 

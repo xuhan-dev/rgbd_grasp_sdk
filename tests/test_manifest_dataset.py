@@ -101,6 +101,24 @@ def test_load_json_manifest_resolves_relative_paths(tmp_path):
     assert samples[0].target == "banana"
 
 
+def test_load_manifest_dict_root_raises_clear_error(tmp_path):
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "rgb": "rgb.png",
+                "depth": "depth.png",
+                "intrinsics": "K.npz",
+                "target": "banana",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(InputValidationError, match="manifest 根节点必须是样本列表"):
+        load_samples(manifest)
+
+
 def test_missing_required_sample_field_raises_clear_error():
     with pytest.raises(InputValidationError, match="sample\\[0\\].depth"):
         normalize_samples(
