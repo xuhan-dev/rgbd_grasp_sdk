@@ -70,11 +70,7 @@ class RGBDGrasp:
         }
 
     def val(self, data: Any) -> dict[str, Any]:
-        samples = self._load_data_samples(data)
-        results = [
-            self._run_sample(sample, strict=False, visualize_3d=None)
-            for sample in samples
-        ]
+        results = self._run_data(data, visualize_3d=None)
         return summarize_validation(results)
 
     def benchmark(
@@ -84,22 +80,13 @@ class RGBDGrasp:
         warmup: int = 1,
         repeat: int = 3,
     ) -> dict[str, Any]:
-        samples = self._load_data_samples(data)
+        self._validate_benchmark_args(warmup=warmup, repeat=repeat)
         for _ in range(warmup):
-            for sample in samples:
-                self._run_sample(sample, strict=False, visualize_3d=None)
+            self._run_data(data, visualize_3d=None)
 
         records: list[BenchmarkRecord] = []
         for _ in range(repeat):
-            for sample in samples:
-                started = time.perf_counter()
-                result = self._run_sample(sample, strict=False, visualize_3d=None)
-                records.append(
-                    BenchmarkRecord(
-                        result=result,
-                        elapsed=time.perf_counter() - started,
-                    )
-                )
+            records.extend(self._benchmark_data(data, visualize_3d=None))
 
         return summarize_benchmark(
             records,
@@ -299,6 +286,71 @@ class RGBDGrasp:
         if isinstance(data, (str, Path)):
             return load_samples(data)
         return normalize_samples(data)
+
+    def _run_data(
+        self,
+        data: Any,
+        *,
+        visualize_3d: bool | None,
+    ) -> list[PipelineResult]:
+        if isinstance(data, list):
+            return [
+                self._run_data_item(item, visualize_3d=visualize_3d)
+                for item in data
+            ]
+        return [
+            self._run_sample(sample, strict=False, visualize_3d=visualize_3d)
+            for sample in self._load_data_samples(data)
+        ]
+
+    def _run_data_item(
+        self,
+        item: Any,
+        *,
+        visualize_3d: bool | None,
+    ) -> PipelineResult:
+        try:
+            sample = normalize_samples(item)[0]
+        except Exception as exc:
+            source_target, source_id = _source_metadata(item)
+            return self._failed_result(exc, target=source_target, sample_id=source_id)
+        return self._run_sample(sample, strict=False, visualize_3d=visualize_3d)
+
+    def _benchmark_data(
+        self,
+        data: Any,
+        *,
+        visualize_3d: bool | None,
+    ) -> list[BenchmarkRecord]:
+        records: list[BenchmarkRecord] = []
+        if isinstance(data, list):
+            for item in data:
+                started = time.perf_counter()
+                result = self._run_data_item(item, visualize_3d=visualize_3d)
+                records.append(
+                    BenchmarkRecord(
+                        result=result,
+                        elapsed=time.perf_counter() - started,
+                    )
+                )
+            return records
+
+        for sample in self._load_data_samples(data):
+            started = time.perf_counter()
+            result = self._run_sample(sample, strict=False, visualize_3d=visualize_3d)
+            records.append(
+                BenchmarkRecord(
+                    result=result,
+                    elapsed=time.perf_counter() - started,
+                )
+            )
+        return records
+
+    def _validate_benchmark_args(self, *, warmup: int, repeat: int) -> None:
+        if warmup < 0:
+            raise InputValidationError("warmup 必须大于等于 0")
+        if repeat < 1:
+            raise InputValidationError("repeat 必须大于等于 1")
 
     def _backend_summary(self) -> dict[str, Any]:
         return {

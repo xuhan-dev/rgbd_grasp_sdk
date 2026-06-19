@@ -281,8 +281,28 @@ def test_predict_requires_target():
         )
 
 
-def test_info_reports_config_backends_and_dependency_status():
-    model, _ = _model_with_fake_pipeline()
+def test_info_reports_config_backends_and_dependency_status(tmp_path):
+    config = SdkConfig(
+        segmentation=SegmentationConfig(
+            backend="mock_seg",
+            options={"model_path": str(tmp_path / "missing-seg.pt"), "device": "cpu"},
+        ),
+        grasping=GraspingConfig(
+            backend="mock_grasp",
+            options={
+                "checkpoint_path": str(tmp_path / "missing-rng.ckpt"),
+                "device": "cpu",
+            },
+        ),
+        mask=MaskConfig(),
+        ranking=RankingConfig(backend="default"),
+        outputs=OutputConfig(visualize_3d=False),
+    )
+    fake = FakePipeline()
+    model = RGBDGrasp(
+        config,
+        pipeline_builder=lambda config, visualize_3d=None: fake,
+    )
 
     info = model.info()
 
@@ -295,15 +315,15 @@ def test_info_reports_config_backends_and_dependency_status():
     assert info["paths"]["grasping.checkpoint_path"]["exists"] is False
 
 
-def test_info_reports_grasping_checkpoint_path_status():
+def test_info_reports_grasping_checkpoint_path_status(tmp_path):
     config = SdkConfig(
         segmentation=SegmentationConfig(
             backend="mock_seg",
-            options={"model_path": "seg.pt", "device": "cpu"},
+            options={"model_path": str(tmp_path / "missing-seg.pt"), "device": "cpu"},
         ),
         grasping=GraspingConfig(
             backend="mock_grasp",
-            options={"checkpoint": "rng.ckpt", "device": "cpu"},
+            options={"checkpoint": str(tmp_path / "missing-rng.ckpt"), "device": "cpu"},
         ),
         mask=MaskConfig(),
         ranking=RankingConfig(backend="default"),
@@ -318,6 +338,31 @@ def test_info_reports_grasping_checkpoint_path_status():
     info = model.info()
 
     assert info["paths"]["grasping.checkpoint"]["exists"] is False
+
+
+def test_val_converts_malformed_list_items_to_failed_results():
+    model, _ = _model_with_fake_pipeline()
+    intrinsics = CameraIntrinsics(fx=1.0, fy=1.0, cx=1.0, cy=1.0)
+
+    summary = model.val(
+        data=[
+            {
+                "rgb": np.zeros((2, 2, 3), dtype=np.uint8),
+                "depth": np.ones((2, 2), dtype=np.uint16),
+                "intrinsics": intrinsics,
+                "target": "apple",
+            },
+            {
+                "rgb": np.zeros((2, 2, 3), dtype=np.uint8),
+                "intrinsics": intrinsics,
+                "target": "pear",
+            },
+        ]
+    )
+
+    assert summary["total"] == 2
+    assert summary["success"] == 1
+    assert summary["failed"] == 1
 
 
 def test_val_uses_manifest_samples_and_validation_summary():
@@ -346,6 +391,33 @@ def test_val_uses_manifest_samples_and_validation_summary():
     assert summary["failed"] == 1
 
 
+def test_benchmark_converts_malformed_list_items_to_failed_records():
+    model, _ = _model_with_fake_pipeline()
+    intrinsics = CameraIntrinsics(fx=1.0, fy=1.0, cx=1.0, cy=1.0)
+
+    summary = model.benchmark(
+        data=[
+            {
+                "rgb": np.zeros((2, 2, 3), dtype=np.uint8),
+                "depth": np.ones((2, 2), dtype=np.uint16),
+                "intrinsics": intrinsics,
+                "target": "apple",
+            },
+            {
+                "rgb": np.zeros((2, 2, 3), dtype=np.uint8),
+                "intrinsics": intrinsics,
+                "target": "pear",
+            },
+        ],
+        warmup=0,
+        repeat=1,
+    )
+
+    assert summary["total"] == 2
+    assert summary["success"] == 1
+    assert summary["failed"] == 1
+
+
 def test_benchmark_runs_warmup_and_repeat_without_counting_warmup():
     model, fake = _model_with_fake_pipeline()
     intrinsics = CameraIntrinsics(fx=1.0, fy=1.0, cx=1.0, cy=1.0)
@@ -367,3 +439,27 @@ def test_benchmark_runs_warmup_and_repeat_without_counting_warmup():
     assert len(fake.calls) == 5
     assert summary["backend"]["segmentation"] == "mock_seg"
     assert summary["backend"]["grasping"] == "mock_grasp"
+
+
+@pytest.mark.parametrize(
+    ("warmup", "repeat"),
+    [
+        (-1, 1),
+        (0, 0),
+        (0, -1),
+    ],
+)
+def test_benchmark_rejects_invalid_warmup_and_repeat(warmup, repeat):
+    model, _ = _model_with_fake_pipeline()
+    intrinsics = CameraIntrinsics(fx=1.0, fy=1.0, cx=1.0, cy=1.0)
+    data = [
+        {
+            "rgb": np.zeros((2, 2, 3), dtype=np.uint8),
+            "depth": np.ones((2, 2), dtype=np.uint16),
+            "intrinsics": intrinsics,
+            "target": "apple",
+        }
+    ]
+
+    with pytest.raises(InputValidationError):
+        model.benchmark(data=data, warmup=warmup, repeat=repeat)
